@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ISpy</title>
+<meta name="description" content="Snap something, write three clues, and see if your partner can guess it. A photo guessing duel for two phones.">
+<meta name="theme-color" content="#24132B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dapple">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Gaegu:wght@400;700&display=swap">
+<style>
+/* Layout: a plum darkroom lit by a red safelight, with cream polaroids and hand-inked stickers on it (the Dapple family look).
+   Every screen is one column: the photo in a polaroid at the top, clue cards under it, then the thing to do. */
+:root{
+  --mat:#24132B; --surface:#311A3A; --surface2:#3D2348; --line:#5A3763;
+  --text:#FBEFF5; --soft:#CDAECB; --acc:#FFC94D; --acc-d:#C48A1E;
+  --cream:#FFF8EC; --ink:#22152A; --ink-soft:#6B5670;
+  --p1:#FF7D6E; --p2:#56A6E2; --good:#3CC489; --bad:#FF6A6F; --pink:#FF9EC4; --safe:#FF5B5B;
+  --display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:"DM Sans","Helvetica Neue",Arial,system-ui,sans-serif;
+  --hand:"Gaegu","Chalkboard SE","Comic Sans MS",cursive;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{margin:0;color:var(--text);font-family:var(--body);font-size:17px;line-height:1.45;-webkit-tap-highlight-color:transparent;overflow-x:hidden;
+  background-color:var(--mat);
+  background-image:radial-gradient(680px 460px at 88% -8%,rgba(255,91,91,.16),transparent 62%),radial-gradient(620px 460px at 0% 38%,rgba(255,201,77,.08),transparent 60%),
+    radial-gradient(rgba(255,255,255,.06) 1.1px,transparent 1.6px);
+  background-size:auto,auto,22px 22px;background-attachment:fixed;
+  padding:calc(20px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(32px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+body.online{padding-top:calc(56px + env(safe-area-inset-top,0px))}
+#app{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--display);font-weight:800;margin:0;line-height:1.02;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:clamp(30px,8vw,42px)}
+h3{font-size:24px}
+p{margin:0}
+.muted{color:var(--soft)}
+.center{text-align:center}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.row.c{justify-content:center}
+.stack{display:flex;flex-direction:column;gap:10px}
+.label{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--soft)}
+.hint{font-size:15px;color:var(--soft)}
+.sticker .hint,.sticker .muted{color:var(--ink-soft)}
+:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
+
+.sticker{background:var(--cream);color:var(--ink);border-radius:18px 22px 17px 24px/22px 17px 24px 18px;box-shadow:4px 5px 0 #12081A;position:relative}
+.ink::before{content:"";position:absolute;inset:0;border:2.5px solid var(--ink);border-radius:inherit;filter:url(#wobble);pointer-events:none;z-index:2}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+
+.btn{appearance:none;border:0;cursor:pointer;font-family:var(--display);font-weight:700;font-size:20px;line-height:1.1;color:var(--ink);background:var(--acc);
+  border-radius:999px;padding:13px 26px 14px;box-shadow:0 5px 0 var(--acc-d),0 10px 22px rgba(0,0,0,.35);transition:transform .1s,box-shadow .1s,opacity .2s;position:relative;text-decoration:none;display:inline-block}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--acc-d),0 4px 10px rgba(0,0,0,.3)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn.ghost{background:transparent;color:var(--text);box-shadow:inset 0 0 0 2px var(--line)}
+.btn.ghost:active{transform:translateY(2px)}
+.sticker .btn.ghost{color:var(--ink);box-shadow:inset 0 0 0 2.5px var(--ink)}
+.btn.small{font-size:16px;padding:9px 16px 10px}
+.btn.pink{background:var(--pink);box-shadow:0 5px 0 #C0628A,0 10px 22px rgba(0,0,0,.35)}
+.link{appearance:none;background:none;border:0;font:inherit;color:var(--soft);text-decoration:underline;text-decoration-color:rgba(205,174,203,.5);text-underline-offset:5px;cursor:pointer;padding:6px}
+.sticker .link{color:var(--ink-soft)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);white-space:nowrap}
+.pill.p1{background:var(--p1);color:var(--ink);border-color:transparent}
+.pill.p2{background:var(--p2);color:var(--ink);border-color:transparent}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* home */
+.hero{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding-top:4px}
+#hero{width:200px;height:200px;cursor:pointer;touch-action:manipulation;position:relative;display:block}
+#hero svg.vf{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#hero .peek{position:absolute;left:30px;top:34px;width:140px}
+#hero .flash{position:absolute;inset:-30px;border-radius:50%;background:radial-gradient(circle,#fff 0,rgba(255,255,255,.85) 30%,transparent 70%);opacity:0;pointer-events:none}
+#hero .flash.on{animation:flash .6s ease-out}
+@keyframes flash{0%{opacity:0}8%{opacity:1}100%{opacity:0}}
+#hero .snap{position:absolute;right:-26px;top:6px;font-family:var(--hand);font-weight:700;font-size:24px;color:var(--ink);background:var(--acc);border:2.5px solid var(--ink);border-radius:12px 14px 12px 4px;padding:0 9px 3px;opacity:0;pointer-events:none}
+#hero .snap.on{animation:owie 1.3s forwards}
+.vf .corner{animation:breathe 2.6s ease-in-out infinite;transform-origin:100px 100px}
+@keyframes breathe{50%{transform:scale(1.05)}}
+.logo{font-size:clamp(56px,17vw,84px);display:flex;justify-content:center;align-items:center;gap:.06em;line-height:.95}
+.logo .w{display:inline-block;animation:drop .7s cubic-bezier(.3,1.6,.5,1) both}
+.logo .w:nth-child(2){animation-delay:.1s}
+.logo .spy{font-family:var(--hand);font-weight:700;letter-spacing:0;color:var(--ink);background:var(--acc);padding:0 .16em .06em;border-radius:14px 18px 13px 19px/18px 13px 19px 14px;rotate:-7deg;box-shadow:3px 4px 0 #12081A;position:relative}
+.logo .spy::before{content:"";position:absolute;inset:0;border:3px solid var(--ink);border-radius:inherit;filter:url(#wobble)}
+@keyframes drop{from{opacity:0;transform:translateY(-36px) rotate(-10deg)}}
+.tag{font-size:18px;color:var(--soft);max-width:32ch}
+.tag i{font-family:var(--hand);font-style:normal;font-size:22px;color:var(--text)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.step{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:12px 8px;border-radius:16px;background:var(--surface2);border:1px solid var(--line);font-size:14px;line-height:1.25;color:var(--soft)}
+.step b{display:block;color:var(--text);font-family:var(--display);font-size:16px}
+.step svg{width:38px;height:38px}
+.step:nth-child(1) svg{animation:bob 2.4s ease-in-out infinite}.step:nth-child(2) svg{animation:bob 2.4s .3s ease-in-out infinite}.step:nth-child(3) svg{animation:bob 2.4s .6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-4px) rotate(-4deg)}}
+.ladder{display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
+.ladder span{font-family:var(--display);font-weight:800;font-size:15px;padding:3px 10px;border-radius:999px;background:var(--acc);color:var(--ink);border:2px solid var(--ink)}
+.ladder span:nth-child(2){background:#FFD97E}.ladder span:nth-child(3){background:#FFE5A8}.ladder span:nth-child(4){background:#FFF0CF}.ladder span:last-child{background:var(--bad)}
+.tiles{display:grid;grid-template-columns:1fr;gap:14px}
+.tile{appearance:none;font:inherit;text-align:left;cursor:pointer;padding:14px 16px 16px;display:flex;gap:14px;align-items:center;border:0;transition:transform .18s;rotate:-.6deg;
+  transform:perspective(600px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg))}
+.tile:active{scale:.98}
+.tile h3{font-size:22px}
+.tile p{font-size:14px;color:var(--ink-soft);line-height:1.3}
+.tile svg{width:64px;flex:none}
+.note{padding:16px 18px;font-size:16px}
+.note b{font-family:var(--hand);font-size:22px;display:block;margin-bottom:2px}
+.note p+p{margin-top:8px}
+.online-box{display:flex;flex-direction:column;gap:12px}
+
+/* forms */
+label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:15px;flex:1 1 200px;min-width:0}
+label.f small{font-weight:500;color:var(--soft)}
+.sticker label.f small{color:var(--ink-soft)}
+input[type=text]{font:inherit;font-size:19px;color:var(--text);background:var(--mat);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;width:100%}
+.sticker input[type=text]{background:#fff;color:var(--ink);border:2px solid var(--ink)}
+input.code{text-transform:uppercase;letter-spacing:.3em;font-family:var(--display);font-weight:800;font-size:32px;text-align:center}
+.err{color:var(--bad);font-size:15px;min-height:1.2em;font-weight:700}
+.sticker .err{color:#C2343B}
+.roomcode{display:flex;gap:8px;justify-content:center}
+.roomcode span{font-family:var(--display);font-weight:800;font-size:clamp(46px,14vw,68px);width:1.1em;height:1.25em;display:grid;place-items:center;background:var(--cream);color:var(--ink);border-radius:14px 18px 13px 19px/18px 13px 19px 14px;box-shadow:3px 4px 0 #12081A;position:relative}
+.roomcode span::before{content:"";position:absolute;inset:0;border:3px solid var(--ink);border-radius:inherit;filter:url(#wobble)}
+.roomcode span:nth-child(odd){transform:rotate(-4deg)}.roomcode span:nth-child(even){transform:rotate(3deg)}
+
+/* polaroids */
+.pola{background:var(--cream);color:var(--ink);padding:12px 12px 10px;border-radius:6px 8px 7px 9px;box-shadow:4px 6px 0 #12081A,0 14px 30px rgba(0,0,0,.35);position:relative;rotate:-1.2deg;animation:develop-in .6s cubic-bezier(.3,1.4,.5,1) both}
+.pola:nth-child(even){rotate:1.4deg}
+.pola::after{content:"";position:absolute;left:50%;top:-12px;width:74px;height:24px;translate:-50% 0;rotate:-3deg;background:rgba(255,201,77,.75);border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.pola.notape::after{display:none}
+.pola .cap{font-family:var(--hand);font-weight:700;font-size:21px;line-height:1.1;text-align:center;padding-top:8px;min-height:1.3em;overflow-wrap:anywhere}
+@keyframes develop-in{from{opacity:0;transform:translateY(20px) rotate(4deg) scale(.95)}}
+.photo{position:relative;background:#1A0E20;border-radius:3px;overflow:hidden;display:grid;place-items:center;aspect-ratio:1/1;cursor:zoom-in}
+.photo img{width:100%;height:100%;object-fit:contain;display:block;opacity:0;transition:opacity .9s,filter 1.2s;filter:blur(8px) saturate(.2) brightness(.6)}
+.photo.ok img{opacity:1;filter:none}
+.photo .ph{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#CDAECB;font-family:var(--hand);font-weight:700;font-size:20px;padding:12px;line-height:1.15}
+.photo.ok .ph{display:none}
+.photo.dev .ph{background:linear-gradient(110deg,#2A1631 30%,#45264F 50%,#2A1631 70%);background-size:300% 100%;animation:shimmer 1.6s linear infinite}
+@keyframes shimmer{to{background-position:-150% 0}}
+.photo.gone{cursor:default}
+.photo.gone .ph{background:repeating-linear-gradient(-45deg,#2A1631 0 10px,#321A3A 10px 20px)}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pgrid .pola{padding:8px 8px 8px}
+.pgrid .pola .cap{font-size:18px;padding-top:6px}
+.lb{position:fixed;inset:0;z-index:40;background:rgba(18,8,26,.92);display:grid;place-items:center;padding:20px;cursor:zoom-out;animation:fade .2s}
+.lb img{max-width:100%;max-height:100%;border-radius:6px;box-shadow:0 0 0 8px var(--cream)}
+@keyframes fade{from{opacity:0}}
+
+/* snap */
+.vfcard{padding:22px 18px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.vbox{position:relative;width:min(240px,70vw);aspect-ratio:1/1;display:grid;place-items:center}
+.vbox svg.vf{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.vbox .peek{width:58%}
+.camin{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.fields{padding:18px 16px 18px;display:flex;flex-direction:column;gap:14px}
+.clue-in{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center}
+.clue-in .n{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:15px;background:var(--acc);color:var(--ink);border:2.5px solid var(--ink);rotate:-6deg}
+.clue-in:nth-of-type(2) .n{rotate:5deg}
+.retake{position:absolute;right:16px;bottom:52px;z-index:3}
+
+/* guess */
+.worth{display:flex;justify-content:center;align-items:center;gap:12px}
+.worth .pts{font-family:var(--display);font-weight:800;font-size:46px;line-height:1;color:var(--ink);background:var(--acc);border:3px solid var(--ink);border-radius:50%;width:84px;height:84px;display:grid;place-items:center;box-shadow:3px 4px 0 #12081A;rotate:-6deg;font-variant-numeric:tabular-nums}
+.worth .pts.drop{animation:dropPts .7s cubic-bezier(.3,1.6,.5,1)}
+@keyframes dropPts{0%{transform:scale(1.4) rotate(14deg);background:var(--bad)}100%{transform:none}}
+.worth .lbl{font-family:var(--hand);font-weight:700;font-size:24px;line-height:1.05}
+.worth .lbl small{display:block;font-family:var(--body);font-weight:500;font-size:14px;color:var(--soft)}
+.clues{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.clue{perspective:700px;min-height:108px}
+.clue .in{position:relative;width:100%;height:100%;min-height:108px;transition:transform .7s cubic-bezier(.3,1.4,.5,1);transform-style:preserve-3d}
+.clue.open .in{transform:rotateY(180deg)}
+.clue .fr,.clue .bk{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:12px 15px 11px 16px/15px 11px 16px 12px;border:2.5px solid var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8px 6px;box-shadow:3px 4px 0 #12081A}
+.clue .fr{background:var(--surface2);border-color:var(--line);color:var(--soft);background-image:radial-gradient(rgba(255,255,255,.08) 1px,transparent 1.5px);background-size:10px 10px}
+.clue .fr b{font-family:var(--display);font-size:34px;line-height:1;color:var(--acc)}
+.clue .fr span{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.clue .bk{background:var(--cream);color:var(--ink);transform:rotateY(180deg);font-family:var(--hand);font-weight:700;font-size:19px;line-height:1.08;overflow-wrap:anywhere;overflow:hidden}
+.clue .bk small{font-family:var(--body);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:2px}
+.clue:nth-child(1){rotate:-2deg}.clue:nth-child(2){rotate:1.5deg}.clue:nth-child(3){rotate:-1deg}
+.tries{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.try{display:inline-flex;align-items:center;gap:6px;padding:4px 12px 5px;border-radius:999px;font-weight:700;font-size:16px;background:rgba(255,106,111,.16);border:1.5px solid var(--bad);color:var(--text)}
+.try s{text-decoration-thickness:2px;text-decoration-color:var(--bad)}
+.try.ok{background:rgba(60,196,137,.18);border-color:var(--good)}
+.try.new{animation:shake .5s}
+.sticker .try,.pola .try{color:var(--ink);background:rgba(255,106,111,.14)}
+.try button{white-space:nowrap}
+.sticker .try.ok{background:rgba(60,196,137,.2)}
+.try button{appearance:none;border:0;font:inherit;font-size:13px;font-weight:700;background:var(--good);color:var(--ink);border-radius:999px;padding:2px 9px;cursor:pointer}
+.gform{display:flex;gap:10px;align-items:stretch}
+.gform input{flex:1;min-width:0;font-size:21px!important}
+.gform .btn{flex:none}
+.warn{font-family:var(--hand);font-weight:700;font-size:20px;color:var(--acc);text-align:center}
+.wrong{position:fixed;left:50%;top:40%;translate:-50% -50%;z-index:35;font-family:var(--display);font-weight:800;font-size:64px;color:var(--bad);text-shadow:3px 4px 0 #12081A;pointer-events:none;animation:stamp 1.1s forwards;white-space:nowrap}
+@keyframes stamp{0%{opacity:0;transform:scale(2.4) rotate(-14deg)}18%{opacity:1;transform:scale(1) rotate(-8deg)}75%{opacity:1}100%{opacity:0;transform:scale(.9) rotate(-8deg)}}
+
+/* duel bits */
+.fighters{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fighter{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:18px;min-width:0}
+.fighter .grow{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fighter b{font-family:var(--display);font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stars{display:flex;gap:3px;font-size:17px;line-height:1;color:rgba(255,255,255,.2)}
+.stars i{font-style:normal}
+.stars i.on{color:var(--acc);text-shadow:1px 1px 0 #12081A}
+.stars i.new{animation:pop .6s cubic-bezier(.3,1.6,.5,1)}
+.fighter .tot{font-size:13px;color:var(--soft);font-weight:700;font-variant-numeric:tabular-nums}
+.blob{width:44px;height:auto;overflow:visible;display:block;transform-origin:50% 95%;flex:none}
+.blob.win{animation:hop .45s 2}
+@keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px) rotate(-2deg)}75%{transform:translateX(6px) rotate(2deg)}}
+.owie{position:absolute}
+@keyframes owie{0%{opacity:0;transform:scale(.3) rotate(-15deg)}12%{opacity:1;transform:scale(1.15) rotate(6deg)}25%{transform:scale(1) rotate(-3deg)}80%{opacity:1}100%{opacity:0;transform:translateY(-8px)}}
+.res{padding:10px 12px 14px;display:flex;flex-direction:column;gap:8px}
+.res .who{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px}
+.res .who i{width:10px;height:10px;border-radius:50%;flex:none}
+.res .gain{font-family:var(--display);font-weight:800;font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+.res .gain.z{color:#C2343B}
+.ans{font-size:14px;color:var(--ink-soft)}
+.ans b{color:var(--ink);font-family:var(--hand);font-size:19px}
+.banner{padding:14px 18px 16px;text-align:center;transform:rotate(-1deg)}
+.banner h3{font-size:clamp(24px,6.5vw,32px)}
+.pop{animation:pop .45s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes pop{from{opacity:0;transform:scale(.7) rotate(-4deg)}}
+.pass{padding:30px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;min-height:42vh;justify-content:center}
+.pass .blob{width:100px}
+.pass .peek{width:110px}
+.waitblob{animation:hop 1.2s infinite}
+.feed{padding:14px 14px 16px;display:flex;flex-direction:column;gap:10px;text-align:center}
+.feed .pola{width:min(220px,62vw);align-self:center}
+.dots::after{content:"";display:inline-block;width:1.2em;text-align:left;animation:dots 1.4s steps(4) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+.confetti{position:relative;height:0}
+.confetti i{position:absolute;width:14px;height:18px;border:2px solid var(--ink);border-radius:4px;top:0;animation:fall 2.6s ease-in forwards;z-index:30}
+.confetti i:nth-child(3n){border-radius:50%;width:16px;height:16px}
+@keyframes fall{from{transform:translateY(-30px) rotate(0)}to{transform:translateY(520px) rotate(540deg);opacity:0}}
+.gal{display:flex;flex-direction:column;gap:22px;width:100%}
+.gal h4{margin:0 0 10px;font-family:var(--display);font-size:18px;color:var(--soft);font-weight:700;text-align:left}
+.gal .ans{color:var(--ink-soft);font-size:13px;text-align:center;line-height:1.3}
+.gal .ans .try{font-size:13px;padding:1px 8px 2px}
+.fuse{padding:12px 16px 14px;display:flex;flex-direction:column;gap:8px;text-align:center;rotate:.6deg}
+.fuse b{font-family:var(--hand);font-size:22px;line-height:1.1}
+.fuse .bar{height:12px;border:2.5px solid var(--ink);border-radius:8px;overflow:hidden;background:#fff;position:relative}
+.fuse .bar i{position:absolute;inset:0 auto 0 0;background:repeating-linear-gradient(-45deg,var(--safe) 0 6px,#FF8A7A 6px 12px);transition:width 1s linear}
+.fuse .spark{display:inline-block;animation:fizz .3s infinite alternate}
+@keyframes fizz{to{transform:scale(1.3) rotate(20deg)}}
+#net{appearance:none;cursor:pointer;position:fixed;z-index:20;top:calc(10px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);font-family:var(--body);font-weight:700;font-size:14px;color:var(--text);
+  padding:7px 14px;border:1px solid var(--line);border-radius:999px;background:var(--surface);box-shadow:0 6px 18px rgba(0,0,0,.4);white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
+#net::first-letter{color:var(--good)}
+#net.lost::first-letter{color:var(--bad)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;max-width:calc(100vw - 32px);padding:12px 16px;text-align:center;font-weight:700}
+.back{text-align:center;margin:26px 0 4px;font-size:15px}
+.back a{color:var(--soft);text-underline-offset:4px}
+/* the eye: blinks by itself */
+.peek .lid{transform-box:fill-box;transform-origin:50% 0;animation:blink 4.6s infinite}
+@keyframes blink{0%,92%,100%{transform:scaleY(0)}95%{transform:scaleY(1)}}
+.peek .look{transition:transform .18s ease-out}
+@media (max-width:420px){.pgrid{gap:12px}.steps{gap:6px}.step{padding:10px 4px;font-size:13px}.clue,.clue .in{min-height:96px}.clue .bk{font-size:17px}.worth .pts{width:72px;height:72px;font-size:38px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="wobble" x="-5%" y="-5%" width="110%" height="110%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="3.2" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<main id="app" aria-live="polite"></main>
+<p class="back"><a href="../">‹ All games on Dapple</a></p>
+<script>
+(()=>{
+'use strict';
+/* ---------- small helpers ---------- */
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const INK='#22152A';
+const PV=['--p1','--p2'];
+const ROUNDS=5,TO_WIN=3,TTL=10*60*1000;
+const app=document.getElementById('app');
+let timers=[];
+function later(fn,ms){timers.push(setTimeout(fn,RM?Math.min(ms,60):ms));}
+function show(html){document.querySelectorAll('.lb,.wrong').forEach(m=>m.remove());timers.forEach(clearTimeout);timers=[];app.innerHTML=html;window.scrollTo(0,0);fillPhotos();}
+const on=(sel,ev,fn)=>{const el=typeof sel==='string'?app.querySelector(sel):sel;if(el)el.addEventListener(ev,fn);return el;};
+const $=s=>app.querySelector(s);
+const store={get(k,d){try{const v=localStorage.getItem('isp:'+k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{if(v==null)localStorage.removeItem('isp:'+k);else localStorage.setItem('isp:'+k,JSON.stringify(v));}catch(e){}}};
+const sess={get(k,d){try{const v=sessionStorage.getItem('isp:'+k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{if(v==null)sessionStorage.removeItem('isp:'+k);else sessionStorage.setItem('isp:'+k,JSON.stringify(v));}catch(e){}}};
+function toast(text){const t=document.createElement('div');t.className='sticker ink toast pop';t.textContent=text;document.body.appendChild(t);setTimeout(()=>t.remove(),3500);}
+const uid=()=>Math.random().toString(36).slice(2,10);
+
+/* ---------- is that the right answer? ----------
+   Lower case, no accents or punctuation, no leading "a", "the", "my"…, plurals folded, and a typo or two
+   forgiven on longer words. "mug" also counts for "coffee mug", and "big red mug" counts for "mug". */
+const STOP=new Set(['a','an','the','my','your','some','this','that','our','his','her','their','its','one']);
+function words(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/&/g,' and ').replace(/[^a-z0-9 ]+/g,' ').trim().split(/\s+/).filter(Boolean);}
+function stem(w){if(w.length>4&&w.endsWith('ies'))return w.slice(0,-3)+'y';if(w.length>4&&/(ches|shes|sses|xes|zes|oes)$/.test(w))return w.slice(0,-2);if(w.length>3&&w.endsWith('s')&&!/(ss|us|is)$/.test(w))return w.slice(0,-1);return w;}
+function toks(s){const w=words(s);while(w.length>1&&STOP.has(w[0]))w.shift();return w.map(stem);}
+function lev(a,b){if(a===b)return 0;const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=Array.from({length:n+1},(_,i)=>i);
+  for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c;}return p[n];}
+const tol=n=>n<=3?0:n<=6?1:2;
+function near(a,b){if(!a||!b)return false;if(a===b)return true;return Math.abs(a.length-b.length)<=2&&lev(a,b)<=tol(Math.min(a.length,b.length));}
+function isRight(guess,ans,alt){
+  const g=toks(guess);if(!g.length)return false;const gc=g.join('');
+  return [ans,...(alt||[])].some(a=>{const t=toks(a);if(!t.length)return false;const ac=t.join('');
+    if(near(gc,ac))return true;
+    const ah=t[t.length-1],gh=g[g.length-1];
+    if(t.length>1&&g.length===1&&ah.length>=3&&near(gc,ah))return true;
+    if(g.length>1&&t.length===1&&gh.length>=3&&near(gh,ac))return true;
+    return false;});
+}
+/* does a clue give the answer away? */
+function givesAway(clue,ans){const c=toks(clue),a=toks(ans);if(!a.length)return false;const head=a[a.length-1];
+  return c.some(w=>head.length>=3&&near(w,head))||(a.join('').length>=4&&c.join('').includes(a.join('')));}
+
+/* ---------- the game, as one document ----------
+   Every round both of you snap something at the same time and send it, then both of you guess the other's.
+   rounds[i].send[s] is what seat s snapped (answer, other words that count, three clues; the photo itself travels separately).
+   rounds[i].g[s] is seat s's go at guessing the other photo: tries so far, clues shown, and the points it ended on.
+   Guessing with no clues is worth 10, and each clue takes 2 off, down to 4 after all three. A wrong guess turns
+   over the next clue; a wrong guess after the third clue scores 0. More points wins the round, and first to 3 rounds
+   (best of 5) takes the game. The sender can say "that counts" about a wrong guess before the next round starts. */
+const mkG=()=>({tries:[],clues:0,done:false,ok:false,pts:0});
+const newRound=()=>({send:[null,null],g:[mkG(),mkG()]});
+const newGame=()=>({gid:uid(),round:1,rounds:[newRound()],ready:[false,false],endedAt:0,wiped:false});
+const cur=G=>G.rounds[G.round-1];
+const both=R=>!!(R.send[0]&&R.send[1]);
+const revealed=R=>R.g[0].done&&R.g[1].done;
+const worth=c=>10-2*c;
+const roundWin=R=>R.g[0].pts===R.g[1].pts?-1:R.g[0].pts>R.g[1].pts?0:1;
+function tally(G){const wins=[0,0],pts=[0,0];G.rounds.forEach(R=>{if(!revealed(R))return;pts[0]+=R.g[0].pts;pts[1]+=R.g[1].pts;const w=roundWin(R);if(w>=0)wins[w]++;});return {wins,pts};}
+function isOver(G){const R=cur(G);if(!revealed(R))return false;const {wins}=tally(G);return wins[0]>=TO_WIN||wins[1]>=TO_WIN||G.round>=ROUNDS;}
+function winnerOf(G){const {wins,pts}=tally(G);if(wins[0]!==wins[1])return wins[0]>wins[1]?0:1;if(pts[0]!==pts[1])return pts[0]>pts[1]?0:1;return -1;}
+const str=(s,n)=>typeof s==='string'?s.trim().slice(0,n):'';
+function cleanSend(s){
+  if(!s||typeof s!=='object')return null;const ans=str(s.ans,40);if(!ans||!toks(ans).length)return null;
+  const clues=Array.isArray(s.clues)?s.clues.slice(0,3).map(c=>str(c,80)):[];if(clues.length!==3||clues.some(c=>!c))return null;
+  const alt=Array.isArray(s.alt)?s.alt.slice(0,8).map(a=>str(a,40)).filter(a=>a&&toks(a).length):[];
+  return {ans,alt,clues};
+}
+/* returns true when it changed something */
+function applyGame(G,seat,it){
+  if(!G||!it||it.gid!==G.gid)return false;
+  const R=cur(G),mine=R.g[seat];let ch=false;
+  if(it.k==='send'&&it.round===G.round&&!R.send[seat]){const s=cleanSend(it.s);if(s){R.send[seat]=s;ch=true;}}
+  else if(it.k==='guess'&&it.round===G.round&&both(R)&&!mine.done&&it.stage===mine.clues){
+    const t=str(it.text,40);if(t){const S=R.send[1-seat],ok=isRight(t,S.ans,S.alt);mine.tries.push({t,c:mine.clues,ok});
+      if(ok){mine.ok=true;mine.done=true;mine.pts=worth(mine.clues);}else if(mine.clues<3)mine.clues++;else{mine.done=true;mine.pts=0;}ch=true;}}
+  else if(it.k==='clue'&&it.round===G.round&&both(R)&&!mine.done&&it.stage===mine.clues&&mine.clues<3){mine.clues++;ch=true;}
+  else if(it.k==='giveup'&&it.round===G.round&&both(R)&&!mine.done){mine.done=true;mine.pts=0;ch=true;}
+  else if(it.k==='allow'&&it.round===G.round&&both(R)){ /* the photo's owner says a wrong guess counts */
+    const og=R.g[1-seat],tr=og.tries[it.idx];
+    if(tr&&!tr.ok&&!(og.ok&&og.done&&og.pts>=worth(tr.c))){og.tries=og.tries.slice(0,it.idx+1);tr.ok=true;tr.allowed=true;og.ok=true;og.done=true;og.clues=tr.c;og.pts=worth(tr.c);ch=true;}}
+  else if(it.k==='ready'&&it.round===G.round&&revealed(R)&&!isOver(G)&&!G.ready[seat]){
+    G.ready[seat]=true;if(G.ready[0]&&G.ready[1]){G.round++;G.rounds.push(newRound());G.ready=[false,false];}ch=true;}
+  else if(it.k==='wipe'&&isOver(G)&&!G.wiped){G.wiped=true;ch=true;}
+  if(ch){const o=isOver(G);G.endedAt=o?(G.endedAt||Date.now()):0;}
+  return ch;
+}
+
+/* ---------- photos: phone to phone, never uploaded, and gone after the game ----------
+   Each photo is shrunk to a small JPEG on the phone that took it. It's kept in this tab's memory and session storage
+   (so a reload keeps it, but closing the tab doesn't), and sent straight to the other phone over the room connection.
+   Ten minutes after a game ends, or when either of you taps "delete now", or a new game starts, they're wiped. */
+const PH=new Map();
+const pk=(gid,round,seat)=>`${gid}-${round}-${seat}`;
+function getPhoto(k){if(PH.has(k))return PH.get(k);try{const v=sessionStorage.getItem('isp:ph:'+k);if(v){PH.set(k,v);return v;}}catch(e){}return null;}
+function putPhoto(k,data){if(typeof data!=='string'||!data.startsWith('data:image/'))return;PH.set(k,data);try{sessionStorage.setItem('isp:ph:'+k,data);}catch(e){}}
+function wipeWhere(test0){const test=k=>k!=='draft'&&test0(k);for(const k of [...PH.keys()])if(test(k))PH.delete(k);
+  try{for(let i=sessionStorage.length-1;i>=0;i--){const k=sessionStorage.key(i);if(k&&k.startsWith('isp:ph:')&&test(k.slice(7)))sessionStorage.removeItem(k);}}catch(e){}}
+const wipeGid=gid=>wipeWhere(k=>k.startsWith(gid+'-'));
+const wipeExcept=gids=>wipeWhere(k=>!gids.some(g=>g&&k.startsWith(g+'-')));
+const photosGone=G=>!!G&&isOver(G)&&(G.wiped||(G.endedAt>0&&Date.now()>G.endedAt+TTL));
+function shrink(file){
+  return new Promise((res,rej)=>{const url=URL.createObjectURL(file),img=new Image();
+    img.onload=()=>{try{const M=720,w0=img.naturalWidth,h0=img.naturalHeight,s=Math.min(1,M/Math.max(w0,h0)),w=Math.max(1,Math.round(w0*s)),h=Math.max(1,Math.round(h0*s));
+      const cv=document.createElement('canvas');cv.width=w;cv.height=h;const c=cv.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,w,h);c.drawImage(img,0,0,w,h);
+      let q=.72,d=cv.toDataURL('image/jpeg',q);while(d.length>150000&&q>.35){q-=.1;d=cv.toDataURL('image/jpeg',q);}
+      URL.revokeObjectURL(url);res(d);}catch(e){URL.revokeObjectURL(url);rej(e);}};
+    img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('img'));};img.src=url;});
+}
+/* <div class="photo" data-ph="key"> gets its picture whenever it's here, and asks the other phone for it when it isn't */
+function photoHTML(k,o={}){return `<div class="photo${o.gone?' gone':''}" data-ph="${o.gone?'':esc(k)}"><img alt="${esc(o.alt||'The photo')}"><div class="ph">${o.gone?'Photo deleted':'Developing<span class="dots"></span>'}</div></div>`;}
+function fillPhotos(){app.querySelectorAll('.photo[data-ph]').forEach(el=>{const k=el.dataset.ph;if(!k)return;const d=getPhoto(k),img=el.querySelector('img');
+  if(d){if(img.getAttribute('src')!==d){img.onload=()=>el.classList.add('ok');img.src=d;}el.classList.remove('dev');}else{el.classList.add('dev');askFor(k);}});}
+app.addEventListener('click',e=>{const p=e.target.closest('.photo.ok');if(!p)return;const lb=document.createElement('div');lb.className='lb';lb.innerHTML=`<img alt="The photo, big">`;lb.firstChild.src=p.querySelector('img').src;lb.addEventListener('click',()=>lb.remove());document.body.appendChild(lb);});
+let askFor=()=>{};
+
+/* ---------- little drawings ---------- */
+let pid=0;
+/* Peek, the eye that spies everything */
+function peekSVG(cls='',mood='happy'){const id='pk'+(pid++);
+  const mouth=mood==='love'?'<path d="M40 79 q10 10 20 0" fill="none" stroke="#22152A" stroke-width="3.6" stroke-linecap="round"/>':mood==='sad'?'<path d="M42 83 q8 -7 16 0" fill="none" stroke="#22152A" stroke-width="3.6" stroke-linecap="round"/>':mood==='wow'?'<ellipse cx="50" cy="81" rx="5" ry="6" fill="#22152A"/>':'<path d="M42 79 q8 7 16 0" fill="none" stroke="#22152A" stroke-width="3.6" stroke-linecap="round"/>';
+  return `<svg class="peek ${cls}" viewBox="0 0 100 100" aria-hidden="true"><defs><clipPath id="${id}"><ellipse cx="50" cy="45" rx="27" ry="24"/></clipPath></defs>
+  <path d="M50 6 C78 4 95 26 93 52 C91 76 72 94 50 93 C26 94 7 76 7 52 C6 26 22 8 50 6Z" fill="#FFC94D" stroke="#22152A" stroke-width="3.5" filter="url(#wobble)"/>
+  <ellipse cx="50" cy="45" rx="27" ry="24" fill="#fff" stroke="#22152A" stroke-width="3.2"/>
+  <g clip-path="url(#${id})"><g class="look"><circle cx="50" cy="46" r="13" fill="#56A6E2"/><circle cx="50" cy="46" r="7" fill="#22152A"/><circle cx="54" cy="42" r="3" fill="#fff"/></g>
+  ${mood==='love'?'<rect x="20" y="18" width="60" height="28" fill="#FFC94D"/><path d="M24 46 q26 -16 52 0" fill="none" stroke="#22152A" stroke-width="3.2"/>':''}
+  <rect class="lid" x="20" y="19" width="60" height="54" fill="#F0B232"/></g>
+  <ellipse cx="50" cy="45" rx="27" ry="24" fill="none" stroke="#22152A" stroke-width="3.2"/>
+  <path d="M28 18 l-4 -7 M40 13 l-1 -8 M60 13 l1 -8 M72 18 l4 -7" stroke="#22152A" stroke-width="3" stroke-linecap="round"/>
+  <ellipse cx="22" cy="72" rx="7" ry="4" fill="#FF8FA3" opacity=".7"/><ellipse cx="78" cy="72" rx="7" ry="4" fill="#FF8FA3" opacity=".7"/>${mouth}</svg>`;}
+const vfSVG=()=>`<svg class="vf" viewBox="0 0 200 200" aria-hidden="true"><g class="corner" fill="none" stroke="#FFC94D" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M10 52 V18 Q10 10 18 10 H52"/><path d="M148 10 H182 Q190 10 190 18 V52"/><path d="M190 148 V182 Q190 190 182 190 H148"/><path d="M52 190 H18 Q10 190 10 182 V148"/></g>
+  <circle cx="176" cy="24" r="5" fill="#FF5B5B"><animate attributeName="opacity" values="1;.15;1" dur="1.2s" repeatCount="indefinite"/></circle></svg>`;
+function faceSVG(kind){const fg=INK;
+  const eyes={love:'<path d="M12 9 l3 3 3-3 M42 9 l3 3 3-3" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'}[kind]||'<circle cx="15" cy="11" r="3.4" stroke="none"/><circle cx="45" cy="11" r="3.4" stroke="none"/>';
+  const mouth={love:'<path d="M23 19 q7 9 14 0" fill="none" stroke-width="2.8" stroke-linecap="round"/>',happy:'<path d="M24 20 q6 6 12 0" fill="none" stroke-width="2.8" stroke-linecap="round"/>',meh:'<path d="M25 22 h10" stroke-width="2.8" stroke-linecap="round"/>',
+    sad:'<path d="M24 24 q6 -6 12 0" fill="none" stroke-width="2.8" stroke-linecap="round"/>',wow:'<ellipse cx="30" cy="22" rx="3.5" ry="4.5" fill="none" stroke-width="2.6"/>'}[kind]||'<path d="M26 20 q4 4 8 0" fill="none" stroke-width="2.8" stroke-linecap="round"/>';
+  return `<svg viewBox="0 0 60 32" aria-hidden="true" fill="${fg}" stroke="${fg}"><ellipse cx="7" cy="20" rx="5.5" ry="3.2" fill="#FF8FA3" stroke="none" opacity=".6"/><ellipse cx="53" cy="20" rx="5.5" ry="3.2" fill="#FF8FA3" stroke="none" opacity=".6"/>${eyes}${mouth}</svg>`;}
+function blobSVG(colVar,kind='happy',cls=''){return `<svg class="blob ${cls}" viewBox="0 0 100 90" aria-hidden="true"><path d="M50 6 C78 4 95 26 93 52 C91 76 72 86 50 85 C26 86 7 76 7 52 C6 26 22 8 50 6Z" fill="var(${colVar})" stroke="${INK}" stroke-width="3.5" filter="url(#wobble)"/>
+  ${faceSVG(kind).replace('<svg ','<svg x="20" y="36" width="60" height="32" ')}</svg>`;}
+const ICON={snap:'<svg viewBox="0 0 40 40" fill="none" stroke="#FFC94D" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 14a3 3 0 0 1 3-3h5l3-4h8l3 4h5a3 3 0 0 1 3 3v16a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z"/><circle cx="20" cy="21" r="6.5"/></svg>',
+  clue:'<svg viewBox="0 0 40 40" fill="none" stroke="#FF9EC4" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="9" width="17" height="24" rx="3" transform="rotate(-10 14 21)"/><rect x="17" y="7" width="17" height="24" rx="3" transform="rotate(8 25 19)"/><path d="M24 15q2-3 4 0t-2 5v2M26 26v.5"/></svg>',
+  guess:'<svg viewBox="0 0 40 40" fill="none" stroke="#7FD6FF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="17" cy="17" r="10"/><path d="M24.5 24.5L34 34"/><path d="M13 17.5l3 3 5-6"/></svg>'};
+function confetti(){const cs=['#FFC94D','#FF9EC4','#7FD6FF','#FF7D6E','#B9F28A','#FFF8EC'];
+  return `<div class="confetti" aria-hidden="true">${Array.from({length:28},(_,i)=>`<i style="left:${Math.random()*100}%;background:${cs[i%cs.length]};animation-delay:${(Math.random()*.9).toFixed(2)}s"></i>`).join('')}</div>`;}
+function stamp(text){const s=document.createElement('div');s.className='wrong';s.textContent=text;document.body.appendChild(s);setTimeout(()=>s.remove(),1200);}
+const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms);}catch(e){}};
+
+/* ---------- shared screen pieces ---------- */
+function starsHTML(n,fresh=-1){return `<span class="stars" aria-label="${n} round${n===1?'':'s'} won">${Array.from({length:TO_WIN},(_,i)=>`<i class="${i<n?'on':''}${i===fresh?' new':''}">★</i>`).join('')}</span>`;}
+function scoreBar(G,names,fresh=-1,mood=['happy','happy']){const {wins,pts}=tally(G);
+  return `<div class="fighters">${[0,1].map(p=>`<div class="fighter"><span id="bl${p}">${blobSVG(PV[p],mood[p])}</span><div class="grow"><b>${esc(names[p])}</b>${starsHTML(wins[p],fresh===p?wins[p]-1:-1)}<span class="tot">${pts[p]} point${pts[p]===1?'':'s'}</span></div></div>`).join('')}</div>`;}
+const topHTML=(G,who,seat)=>`<div class="topbar">${who!=null?`<span class="pill ${seat?'p2':'p1'}">${esc(who)}</span>`:'<span></span>'}<span class="pill">Round ${G.round} of ${ROUNDS} · first to ${TO_WIN}</span></div>`;
+function cluesHTML(clues,shown,flipNew=-1){return `<div class="clues">${clues.map((c,i)=>`<div class="clue${i<shown&&i!==flipNew?' open':''}" data-i="${i}"><div class="in"><div class="fr"><b>${i+1}</b><span>Clue · −2</span></div><div class="bk"><small>Clue ${i+1}</small>${esc(c)}</div></div></div>`).join('')}</div>`;}
+function triesHTML(tries,o={}){if(!tries.length)return '';return `<div class="tries">${tries.map((t,i)=>`<span class="try${t.ok?' ok':''}${o.fresh&&i===tries.length-1&&!t.ok?' new':''}">${t.ok?'✓':'✗'} ${t.ok?esc(t.t):`<s>${esc(t.t)}</s>`}${t.allowed?' <small>(counted)</small>':''}${o.allow&&!t.ok?`<button type="button" data-allow="${i}">It counts</button>`:''}</span>`).join('')}</div>`;}
+function resultLine(g){return g.ok?`Got it with ${g.clues===0?'no clues':g.clues===1?'1 clue':g.clues+' clues'}`:g.tries.length?'Didn\'t get it':'Gave up';}
+
+/* ---------- snap: take a photo, say what it is, write three clues ----------
+   C: {G, names, me, act(it), partner} */
+function snapScreen(C){
+  const G=C.G,R=cur(G),dk='draft',dr0=sess.get(dk,null),dr=dr0&&dr0.gid===G.gid&&dr0.round===G.round&&dr0.seat===C.me?dr0:{gid:G.gid,round:G.round,seat:C.me,ans:'',alt:'',clues:['','',''],photo:null};
+  if(dr.photo)PH.set('draft',dr.photo);
+  const save=()=>{try{sess.set(dk,dr);}catch(e){}};
+  const picked=!!(dr.photo||getPhoto('draft'));
+  show(`${topHTML(G,C.names[C.me],C.me)}
+    ${picked?`<div class="pola" id="pv">${photoHTML('draft',{alt:'Your photo'})}<div class="cap">I spy with my little eye…</div><button class="btn ghost small retake" id="retake" type="button">Retake</button></div>
+      <section class="sticker ink fields"><label class="f">What is it?<input type="text" id="ans" maxlength="40" autocomplete="off" placeholder="e.g. rubber duck" value="${esc(dr.ans)}"></label>
+        <label class="f">Other words that count <small>Optional, split with commas. e.g. duck, duckie</small><input type="text" id="alt" maxlength="120" autocomplete="off" value="${esc(dr.alt)}"></label>
+        <span class="label" style="color:var(--ink-soft)">Three clues, vaguest first</span>
+        ${[0,1,2].map(i=>`<div class="clue-in"><span class="n">${worth(i+1)}</span><input type="text" id="c${i}" maxlength="80" autocomplete="off" placeholder="${['Something vague','A bit warmer','Nearly gives it away'][i]}" value="${esc(dr.clues[i])}" aria-label="Clue ${i+1}"></div>`).join('')}
+        <p class="hint">${esc(C.names[1-C.me])} can guess for 10 straight away. Each clue they turn over drops it by 2.</p>
+        <p class="err" id="err"></p>
+        <div class="row"><button class="btn" id="send" type="button">Send it to ${esc(C.names[1-C.me])}</button></div></section>`
+    :`<section class="sticker ink vfcard"><h2>I spy…</h2><p class="muted">Snap something near you for ${esc(C.names[1-C.me])} to guess. The trickier the better, but it has to be guessable!</p>
+      <div class="vbox">${vfSVG()}${peekSVG('','wow')}</div>
+      <label class="btn" for="cam">Snap a photo<input class="camin" type="file" id="cam" accept="image/*" capture="environment"></label>
+      <label class="link" for="lib">or pick one from your photos<input class="camin" type="file" id="lib" accept="image/*"></label>
+      <p class="err" id="err"></p></section>`}
+    ${C.extra||''}`);
+  const err=$('#err');
+  const took=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;err.textContent='Developing…';
+    try{const d=await shrink(f);dr.photo=d;PH.set('draft',d);save();buzz(30);snapScreen(C);}catch(x){err.textContent='Couldn\'t open that photo. Try another one.';}};
+  on('#cam','change',took);on('#lib','change',took);
+  if(!picked){const pk2=$('.vbox .peek');if(pk2)lookAround(pk2);return;}
+  on('#retake','click',()=>{dr.photo=null;PH.delete('draft');save();snapScreen(C);});
+  const bind=(id,fn)=>on('#'+id,'input',e=>{fn(e.target.value);save();});
+  bind('ans',v=>dr.ans=v);bind('alt',v=>dr.alt=v);[0,1,2].forEach(i=>bind('c'+i,v=>dr.clues[i]=v));
+  on('#send','click',()=>{
+    const s={ans:dr.ans.trim(),alt:dr.alt.split(/[,;\n]/).map(x=>x.trim()).filter(Boolean),clues:dr.clues.map(c=>c.trim())};
+    if(!s.ans||!toks(s.ans).length){err.textContent='Say what it is first, so we know when they get it.';$('#ans').focus();return;}
+    const miss=s.clues.findIndex(c=>!c);if(miss>=0){err.textContent=`Clue ${miss+1} is empty. You need all three.`;$('#c'+miss).focus();return;}
+    const leak=s.clues.findIndex(c=>givesAway(c,s.ans));if(leak>=0){err.textContent=`Clue ${leak+1} gives it away! Try saying it without "${s.ans}".`;$('#c'+leak).focus();return;}
+    const k=pk(G.gid,G.round,C.me);putPhoto(k,dr.photo||getPhoto('draft'));PH.delete('draft');sess.set(dk,null);
+    C.sent&&C.sent(k);buzz([20,40,20]);C.act({k:'send',gid:G.gid,round:G.round,s});
+  });
+}
+/* Peek glances about on its own */
+function lookAround(svg){const g=svg.querySelector('.look');if(!g||RM)return;const t=setInterval(()=>{if(!svg.isConnected){clearInterval(t);return;}const a=Math.random()*6.28,r=Math.random()*7;g.style.transform=`translate(${Math.cos(a)*r}px,${Math.sin(a)*r*.8}px)`;},1100);}
+
+/* ---------- guess: the other photo, three face-down clues, and a box ---------- */
+let lastG={sig:'',tries:0,clues:0};
+function guessScreen(C,busy){
+  const G=C.G,R=cur(G),me=C.me,them=1-me,S=R.send[them],g=R.g[me],k=pk(G.gid,G.round,them);
+  const sig=`${G.gid}|${G.round}|${me}`,freshWrong=lastG.sig===sig&&g.tries.length>lastG.tries,freshClue=lastG.sig===sig&&g.clues>lastG.clues?g.clues-1:-1;
+  lastG={sig,tries:g.tries.length,clues:g.clues};
+  const w=worth(g.clues),last=g.clues>=3;
+  show(`${topHTML(G,C.names[me],me)}
+    <div class="worth"><span class="pts${freshClue>=0?' drop':''}">${w}</span><span class="lbl">${esc(C.names[them])} spied something<small>Guess it now for ${w} point${w===1?'':'s'}</small></span></div>
+    <div class="pola">${photoHTML(k,{alt:`${C.names[them]}'s photo`})}<div class="cap">I spy with my little eye…</div></div>
+    ${cluesHTML(S.clues,g.clues,freshClue)}
+    ${triesHTML(g.tries,{fresh:freshWrong})}
+    ${last?'<p class="warn">Last guess! Get this one wrong and it\'s 0.</p>':''}
+    <form class="gform" id="gf"><input type="text" id="gin" maxlength="40" autocomplete="off" autocapitalize="off" placeholder="What is it?" aria-label="Your guess" ${busy?'disabled':''}><button class="btn" id="go" ${busy?'disabled':''}>${busy?'Checking…':'Guess'}</button></form>
+    <div class="row c">${last?`<button class="btn ghost small" id="giveup" type="button" ${busy?'disabled':''}>Give up</button>`:`<button class="btn ghost small" id="clue" type="button" ${busy?'disabled':''}>Turn over clue ${g.clues+1} (−2)</button>`}</div>
+    <p class="hint center">Tap the photo to see it bigger.</p>`);
+  if(freshWrong){stamp('Nope!');buzz(120);}
+  if(freshClue>=0)later(()=>{const el=app.querySelector(`.clue[data-i="${freshClue}"]`);if(el)el.classList.add('open');},freshWrong?650:150);
+  const gin=$('#gin');if(!busy&&gin&&!matchMedia('(pointer:coarse)').matches)gin.focus();
+  on('#gf','submit',e=>{e.preventDefault();const t=gin.value.trim();if(!t||busy)return;C.act({k:'guess',gid:G.gid,round:G.round,stage:g.clues,text:t});});
+  on('#clue','click',()=>{if(!busy)C.act({k:'clue',gid:G.gid,round:G.round,stage:g.clues});});
+  on('#giveup','click',()=>{if(!busy)C.act({k:'giveup',gid:G.gid,round:G.round});});
+}
+
+/* ---------- waiting: for their photo, or for them to finish guessing yours (live) ---------- */
+let lastDone='';
+function waitSend(C){const G=C.G;
+  show(`${topHTML(G,C.names[C.me],C.me)}<section class="sticker ink pass pop">${peekSVG('waitblob','happy')}<h2>Sent! Now ${esc(C.names[1-C.me])} is snapping something<span class="dots"></span></h2>
+    <p class="muted">You'll both guess at the same time once it arrives.</p>
+    <div class="pola" style="width:min(200px,56vw)">${photoHTML(pk(G.gid,G.round,C.me),{alt:'Your photo'})}<div class="cap">${esc(cur(G).send[C.me]?cur(G).send[C.me].ans:'Sending…')}</div></div>
+    ${C.menu?'<button class="link" id="wmenu">Room menu</button>':''}</section>`);
+  on('#wmenu','click',C.menu);const p=app.querySelector('.peek');if(p)lookAround(p);}
+function waitGuess(C){
+  const G=C.G,R=cur(G),me=C.me,them=1-me,mine=R.g[me],their=R.g[them],S=R.send[me];
+  const sig=`${G.gid}|${G.round}|${me}`,fresh=lastDone!==sig;lastDone=sig;
+  show(`${fresh&&mine.ok?confetti():''}${topHTML(G,C.names[me],me)}
+    <div class="sticker ink banner pop">${mine.ok?`<h3>Got it! +${mine.pts}</h3><p>It was ${esc(R.send[them].ans)}. ${resultLine(mine)}.</p>`:`<h3>No points this time</h3><p>It was <b>${esc(R.send[them].ans)}</b>.</p>`}</div>
+    <section class="card feed"><span class="label">${esc(C.names[them])} is guessing yours</span>
+      <div class="pola">${photoHTML(pk(G.gid,G.round,me),{alt:'Your photo'})}<div class="cap">${esc(S.ans)}</div></div>
+      <p><b>${their.clues===0?'No clues yet':`On clue ${their.clues}`}</b> · <span class="muted">worth ${worth(their.clues)} now</span></p>
+      ${triesHTML(their.tries,{allow:true})||'<p class="muted">No guesses yet<span class="dots"></span></p>'}
+      ${their.tries.some(t=>!t.ok)?'<p class="hint">Was a guess close enough? Tap "It counts" and they get the points.</p>':''}</section>
+    ${C.menu?'<div class="row c"><button class="link" id="wmenu">Room menu</button></div>':''}`);
+  if(fresh&&mine.ok)buzz([30,50,30]);
+  on('#wmenu','click',C.menu);
+  app.querySelectorAll('[data-allow]').forEach(b=>b.addEventListener('click',()=>C.act({k:'allow',gid:G.gid,round:G.round,idx:+b.dataset.allow})));
+}
+
+/* ---------- the round's reveal: both photos, both answers, who won ---------- */
+function revealScreen(C,next){
+  const G=C.G,R=cur(G),w=roundWin(R),over=isOver(G),nm=C.names;
+  const mood=[0,1].map(p=>w<0?'happy':w===p?'love':'sad');
+  show(`${topHTML(G,null)}${w>=0&&!RM?confetti():''}
+    ${scoreBar(G,nm,w,mood)}
+    <div class="pgrid">${[0,1].map(s=>{const g=R.g[1-s];return `<div class="pola notape">${photoHTML(pk(G.gid,G.round,s),{alt:`${nm[s]}'s photo`})}<div class="cap">${esc(R.send[s].ans)}</div></div>`;}).join('')}</div>
+    <div class="pgrid">${[0,1].map(s=>{const g=R.g[1-s];return `<div class="sticker ink res"><div class="who"><i style="background:var(${PV[1-s]})"></i>${esc(nm[1-s])} guessed</div>
+      <span class="gain${g.pts?'':' z'}">+${g.pts}</span>${triesHTML(g.tries,{allow:C.canAllow&&C.canAllow(s)})||'<span class="ans">Gave up</span>'}<span class="ans">${resultLine(g)}</span></div>`;}).join('')}</div>
+    <div class="stack" style="align-items:center"><div class="sticker ink banner pop">${w<0?`<h3>Even round!</h3><p>${R.g[0].pts} each, so nobody takes it.</p>`:`<h3>${esc(nm[w])} takes round ${G.round}!</h3><p>${R.g[w].pts} vs ${R.g[1-w].pts}.</p>`}</div>
+    <button class="btn" id="next">${over?'See who won':'Next round'}</button></div>`);
+  if(w>=0)later(()=>{const b=app.querySelector('#bl'+w+' .blob');if(b)b.classList.add('win');},200);
+  [...app.querySelectorAll('.res')].forEach((el,s)=>el.querySelectorAll('[data-allow]').forEach(b=>b.addEventListener('click',()=>C.act({k:'allow',gid:G.gid,round:G.round,idx:+b.dataset.allow},s))));
+  on('#next','click',()=>next(over));
+}
+
+/* ---------- the end: who won, every photo with every guess, and the fuse burning down ---------- */
+let fuseT=null;
+function finalScreen(C,o){
+  const G=C.G,nm=C.names,W=winnerOf(G),{wins,pts}=tally(G),gone=photosGone(G);
+  clearInterval(fuseT);
+  show(`${W>=0?confetti():''}<section class="sticker ink pass pop" style="min-height:0">${W>=0?blobSVG(PV[W],'love','win'):peekSVG('','love')}<h2>${W>=0?`${esc(nm[W])} wins!`:'It\'s a draw!'}</h2>
+    <p class="muted">${wins[0]}–${wins[1]} in rounds, ${pts[0]}–${pts[1]} in points.</p></section>
+    ${scoreBar(G,nm)}
+    <div class="sticker ink fuse" id="fuse"></div>
+    <div class="gal">${G.rounds.filter(revealed).map((R,i)=>`<div><h4>Round ${i+1}${roundWin(R)>=0?` · ${esc(nm[roundWin(R)])} took it`:' · even'}</h4><div class="pgrid">${[0,1].map(s=>{const g=R.g[1-s];return `<div class="pola${s?'':' notape'}">${photoHTML(pk(G.gid,i+1,s),{gone,alt:`${nm[s]}'s photo, a ${R.send[s].ans}`})}<div class="cap">${esc(R.send[s].ans)}</div>
+      <div class="ans">${esc(nm[1-s])}: ${g.tries.map(t=>`<span class="try${t.ok?' ok':''}">${t.ok?esc(t.t):`<s>${esc(t.t)}</s>`}</span>`).join(' ')||'gave up'} <b>+${g.pts}</b></div></div>`;}).join('')}</div></div>`).join('')}</div>
+    <div class="row c">${o.again?'<button class="btn" id="again">Rematch</button>':''}${o.room?'<button class="btn ghost" id="room">Back to the room</button>':''}<button class="btn ghost" id="home">Home</button></div>`);
+  const fuse=$('#fuse');
+  const tick=()=>{if(!fuse.isConnected){clearInterval(fuseT);return;}
+    if(photosGone(G)){if(!fuse.dataset.gone){fuse.dataset.gone=1;wipeGid(G.gid);fuse.innerHTML='<b>Poof! The photos are gone.</b><span class="hint">They\'ve been wiped from both phones. Only the words are left.</span>';
+      app.querySelectorAll('.photo').forEach(p=>{p.className='photo gone';p.dataset.ph='';p.querySelector('.ph').textContent='Photo deleted';p.querySelector('img').removeAttribute('src');});}clearInterval(fuseT);return;}
+    const left=Math.max(0,G.endedAt+TTL-Date.now()),m=Math.floor(left/60000),s=Math.floor(left/1000)%60;
+    fuse.innerHTML=`<b><span class="spark">✸</span> These photos delete themselves in ${m}:${String(s).padStart(2,'0')}</b><div class="bar"><i style="width:${left/TTL*100}%"></i></div><button class="link" id="wipe" type="button">Delete them now</button>`;
+    on(fuse.querySelector('#wipe'),'click',()=>{o.wipe();});};
+  tick();fuseT=setInterval(tick,1000);
+  on('#again','click',o.again);on('#room','click',o.room);on('#home','click',o.home||home);
+}
+
+/* ---------- home ---------- */
+function home(){
+  show(`<header class="hero"><div id="hero" role="img" aria-label="Peek, a little eye in a camera viewfinder. Tap it to take a photo.">${vfSVG()}${peekSVG()}<div class="flash"></div><span class="snap">Snap!</span></div>
+    <h1 class="logo" aria-label="ISpy"><span class="w">i</span><span class="w spy">spy</span></h1>
+    <p class="tag"><i>with my little eye…</i><br>Snap something, write three clues, and see if your partner can guess it.</p></header>
+    <div class="steps"><div class="step">${ICON.snap}<span><b>Snap</b>a photo and say what it is</span></div><div class="step">${ICON.clue}<span><b>Clue</b>write three clues, vaguest first</span></div><div class="step">${ICON.guess}<span><b>Guess</b>theirs while they guess yours</span></div></div>
+    <div class="stack" style="gap:6px;align-items:center"><span class="label">Points for a right guess</span><div class="ladder"><span>No clues 10</span><span>1 clue 8</span><span>2 clues 6</span><span>3 clues 4</span><span>Wrong 0</span></div></div>
+    <section class="card online-box"><h3>Play on two phones</h3>
+      <p class="muted">One of you starts a room and the other joins with its four-letter code. You each snap and guess on your own phone.</p>
+      <div class="row"><button class="btn" id="host">Start a room</button><button class="btn ghost" id="join">Join a room</button></div></section>
+    <div class="tiles"><button class="tile sticker ink" id="m-local">${peekSVG('','happy')}<span><h3>Pass and play</h3><p>The same game on one phone. Hand it over between turns, and no peeking.</p></span></button></div>
+    <div class="note sticker ink"><b>How it works</b><p>Every round you both snap something and send it at the same time, then you both guess the other's photo. Guess straight away for 10, or turn over a clue for 2 less. A wrong guess turns over the next clue for you, and a wrong guess after the third clue scores 0.</p>
+      <p>More points takes the round. Best of 5, so first to win 3 rounds wins.</p>
+      <p><b style="display:inline;font-size:18px">Your photos stay private.</b> They go straight from one phone to the other and are never uploaded. At the end you see every photo with every guess, and then they delete themselves.</p></div>`);
+  on('#m-local','click',localSetup);on('#host','click',()=>roomName(true));on('#join','click',()=>roomName(false));
+  heroBits();
+  app.querySelectorAll('.tile').forEach(g=>{const set=e=>{const r=g.getBoundingClientRect();g.style.setProperty('--ry',((e.clientX-r.left)/r.width-.5)*10+'deg');g.style.setProperty('--rx',(.5-(e.clientY-r.top)/r.height)*8+'deg');};
+    const reset=()=>{g.style.setProperty('--ry','0deg');g.style.setProperty('--rx','0deg');};if(!RM){g.addEventListener('pointermove',set);g.addEventListener('pointerdown',set);}['pointerleave','pointerup','pointercancel'].forEach(ev=>g.addEventListener(ev,reset));});
+}
+/* Peek's eye follows your finger round the screen, and a tap takes a photo */
+let eyeOff=null;
+function heroBits(){
+  const h=$('#hero');if(!h)return;const look=h.querySelector('.look'),fl=h.querySelector('.flash'),sn=h.querySelector('.snap');
+  if(eyeOff)eyeOff();
+  const mv=e=>{if(!look.isConnected){eyeOff();return;}const r=h.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height*.42,dx=e.clientX-cx,dy=e.clientY-cy,d=Math.hypot(dx,dy)||1,k=Math.min(1,d/160)*8;look.style.transform=`translate(${dx/d*k}px,${dy/d*k*.8}px)`;};
+  addEventListener('pointermove',mv,{passive:true});addEventListener('pointerdown',mv,{passive:true});eyeOff=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerdown',mv);eyeOff=null;};
+  h.addEventListener('click',()=>{fl.classList.remove('on');sn.classList.remove('on');void fl.offsetWidth;fl.classList.add('on');sn.classList.add('on');buzz(25);
+    sn.textContent=['Snap!','Click!','Got it!','Say cheese!'][Math.floor(Math.random()*4)];});
+  if(!RM)lookAround(h.querySelector('.peek'));
+}
+
+/* ---------- one phone: pass and play ---------- */
+let LOC=null;
+function localSetup(){
+  const n=store.get('names',['','']);
+  show(`<h2>Pass and play</h2><section class="card stack" style="gap:16px">
+    <div class="row"><label class="f">Player one<input type="text" id="n1" maxlength="18" placeholder="Player 1" value="${esc(n[0])}"></label>
+    <label class="f">Player two<input type="text" id="n2" maxlength="18" placeholder="Player 2" value="${esc(n[1])}"></label></div>
+    <p class="hint">You take turns with the phone: one snaps while the other looks away, then you swap. Best of 5.</p>
+    <div class="row"><button class="btn" id="start">Start</button><button class="link" id="back">Back</button></div></section>`);
+  on('#back','click',home);
+  on('#start','click',()=>{const raw=[$('#n1').value.trim(),$('#n2').value.trim()];store.set('names',raw);
+    wipeExcept([NET.doc&&NET.doc.game&&NET.doc.game.gid]);LOC={names:[raw[0]||'Player 1',raw[1]||'Player 2'],G:newGame(),holder:null,seenOver:false,ack:{}};localRender();});
+}
+function passScreen(name,colVar,line,go){
+  show(`<section class="sticker ink pass pop">${blobSVG(colVar,'happy','waitblob')}<h2>Pass to ${esc(name)}</h2><p class="muted">${line}</p><button class="btn" id="ready">I'm ${esc(name)}, go</button></section>`);
+  on('#ready','click',go);}
+function localRender(){
+  const L=LOC;if(!L)return home();const G=L.G,R=cur(G);
+  const C=s=>({G,names:L.names,me:s,act:(it,as)=>{if(applyGame(G,as??s,it))localRender();},canAllow:()=>true});
+  if(isOver(G)&&L.seenOver)return finalScreen(C(0),{again:()=>{wipeGid(G.gid);L.G=newGame();L.holder=null;L.seenOver=false;L.ack={};localRender();},wipe:()=>{applyGame(G,0,{k:'wipe',gid:G.gid});wipeGid(G.gid);localRender();},home:()=>{wipeGid(G.gid);LOC=null;home();}});
+  /* a guess just finished: show how it went before the phone moves on */
+  for(const s of [0,1]){const tag=G.round+':'+s;if(R.g[s].done&&L.holder===s&&!L.ack[tag]){const g=R.g[s],them=1-s;
+    show(`${g.ok&&!RM?confetti():''}${topHTML(G,L.names[s],s)}<section class="sticker ink pass pop">${blobSVG(PV[s],g.ok?'love':'sad',g.ok?'win':'')}<h2>${g.ok?`Got it! +${g.pts}`:'No points this time'}</h2>
+      <p class="muted">It was <b>${esc(R.send[them].ans)}</b>. ${resultLine(g)}.</p>${triesHTML(g.tries)}
+      <button class="btn" id="ok">${R.g[them].done?'See the round':'Pass it on'}</button></section>`);
+    if(g.ok)buzz([30,50,30]);on('#ok','click',()=>{L.ack[tag]=1;localRender();});return;}}
+  let seat,draw;
+  if(!R.send[0]){seat=0;draw=()=>snapScreen(C(0));}
+  else if(!R.send[1]){seat=1;draw=()=>snapScreen(C(1));}
+  else if(!R.g[0].done){seat=0;draw=()=>guessScreen(C(0));}
+  else if(!R.g[1].done){seat=1;draw=()=>guessScreen(C(1));}
+  else{L.holder=null;lastG.sig='';
+    return revealScreen(Object.assign(C(0),{act:(it,s)=>{if(applyGame(G,s,it))localRender();}}),over=>{if(over){L.seenOver=true;localRender();}else{applyGame(G,0,{k:'ready',gid:G.gid,round:G.round});applyGame(G,1,{k:'ready',gid:G.gid,round:G.round});localRender();}});}
+  if(L.holder!==seat){const snapping=!R.send[seat];
+    return passScreen(L.names[seat],PV[seat],snapping?`Your turn to snap something for ${esc(L.names[1-seat])}. ${esc(L.names[1-seat])}, look away!`:`Your turn to guess ${esc(L.names[1-seat])}'s photo.`,()=>{L.holder=seat;draw();});}
+  draw();
+}
+
+/* ---------- two phones: the same pairing Hugh, Paddle Draft and the others use ----------
+   Phones find each other through PeerJS's free public broker, using the room code as the host's address.
+   The room lives in one shared document that only the host's phone changes, and every phone keeps a copy
+   in local storage, so a reload, a locked screen or a dropped connection never loses the game. The guest's own
+   moves are saved too and sent again until the host's copy shows them. Photos never go in that document: they're
+   sent on their own, in pieces, and each phone asks the other for any it's missing. A finished or closed game never
+   traps anyone: reopening lands on the home screen. */
+const PEER_PREFIX='ispy-w4n8-';
+const peerOpts=()=>Object.assign({debug:0},window.ISPY_PEER_SERVER||{});
+const DEVICE=(()=>{let d=store.get('device','');if(!d){d='d'+Math.random().toString(36).slice(2,12);store.set('device',d);}return d;})();
+const NET={peer:null,conn:null,host:false,code:null,active:false,rejoin:null,doc:null,intents:{},key:'',overSeen:''};
+const ME=()=>NET.host?0:1;
+const up=()=>!!(NET.conn&&NET.conn.open);
+const saveDoc=()=>store.set('doc:'+NET.code,NET.doc);
+const saveIntents=()=>store.set('intents:'+NET.code,NET.intents);
+const netEl=document.createElement('button');netEl.id='net';netEl.type='button';netEl.hidden=true;document.body.insertBefore(netEl,app);
+netEl.addEventListener('click',()=>{if(NET.active)home();});
+function reconnectNow(){if(NET.host)hostRoom();else{clearTimeout(NET.rejoin);NET.rejoin=null;scheduleRejoin(0);}}
+function netStatus(){
+  if(!NET.active){netEl.hidden=true;document.body.classList.remove('online');return;}
+  netEl.hidden=false;document.body.classList.add('online');netEl.classList.toggle('lost',!up());
+  const them=NET.doc&&NET.doc.names[1-ME()];
+  netEl.textContent=up()?`● Room ${NET.code} · with ${them||'partner'} · menu`:(NET.host&&!(NET.doc&&NET.doc.guest))?`● Room ${NET.code} · waiting for partner`:`● Room ${NET.code} · reconnecting… · menu`;
+}
+const libs={};
+function loadScript(src){if(!libs[src])libs[src]=new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>{delete libs[src];rej(new Error('load'));};document.head.appendChild(s);});return libs[src];}
+const LETTERS='ABCDEFGHJKMNPQRSTUVWXYZ';
+const newCode=()=>Array.from({length:4},()=>LETTERS[Math.floor(Math.random()*LETTERS.length)]).join('');
+function raw(m,c=NET.conn){if(c&&c.open){try{c.send(JSON.stringify(m));}catch(e){}}}
+/* photos over the wire, in 12k pieces so no phone's connection chokes on one big message */
+const CH=12000,INB={},asked={};
+function sendPhoto(k){const d=getPhoto(k);if(!d||!up())return;const n=Math.ceil(d.length/CH);for(let i=0;i<n;i++)raw({t:'pc',k,i,n,s:d.slice(i*CH,(i+1)*CH)});}
+const gidOk=k=>{const G=NET.doc&&NET.doc.game;return !!G&&k.startsWith(G.gid+'-')&&!photosGone(G);};
+function gotPiece(m){if(typeof m.k!=='string'||typeof m.s!=='string'||!(m.n>0&&m.n<200)||!(m.i>=0&&m.i<m.n)||!gidOk(m.k)||getPhoto(m.k))return;
+  const b=INB[m.k]&&INB[m.k].n===m.n?INB[m.k]:(INB[m.k]={n:m.n,p:[],got:0});if(b.p[m.i]==null){b.p[m.i]=m.s;b.got++;}
+  if(b.got===b.n){delete INB[m.k];putPhoto(m.k,b.p.join(''));fillPhotos();}}
+askFor=k=>{if(!NET.active||!up()||!gidOk(k)||getPhoto(k))return;const t=Date.now();if(asked[k]&&t-asked[k]<3000)return;asked[k]=t;raw({t:'need',k});};
+/* which photos this phone should have: all of its own, and the other's once both of you have sent that round */
+function wantPhotos(){const G=NET.doc&&NET.doc.game;if(!G||photosGone(G))return;const me=ME();
+  G.rounds.forEach((R,i)=>{if(R.send[me])askFor(pk(G.gid,i+1,me));if(both(R))askFor(pk(G.gid,i+1,1-me));});}
+function photoMsg(m){if(m.t==='need'&&typeof m.k==='string'){if(gidOk(m.k))sendPhoto(m.k);return true;}if(m.t==='pc'){gotPiece(m);return true;}return false;}
+function wireConn(conn){
+  conn.on('open',()=>{if(!NET.host){NET.conn=conn;raw({t:'hello',id:DEVICE,name:store.get('me','')});Object.values(NET.intents).forEach(it=>raw({t:'intent',it}));}keepAwake();netStatus();setTimeout(wantPhotos,500);});
+  conn.on('data',d=>{let m;try{m=typeof d==='string'?JSON.parse(d):d;}catch(e){return;}if(m&&typeof m==='object')(NET.host?hostGot:guestGot)(conn,m);});
+  conn.on('close',()=>{if(NET.conn===conn){NET.conn=null;netStatus();renderOnline();scheduleRejoin();}});
+  conn.on('error',()=>{});
+}
+async function hostRoom(){
+  if(!NET.active||!NET.host)return;
+  try{await loadScript('vendor/peerjs.min.js');}catch(e){netEl.textContent='● Couldn\'t load the connection code. Tap to retry.';netEl.classList.add('lost');return;}
+  if(!NET.active||!NET.host)return;
+  if(NET.peer&&!NET.peer.destroyed&&NET.peer.open)return;
+  if(NET.peer){try{NET.peer.destroy();}catch(e){}}
+  const p=new Peer(PEER_PREFIX+NET.code,peerOpts());NET.peer=p;
+  p.on('open',()=>netStatus());
+  p.on('connection',conn=>wireConn(conn));
+  p.on('disconnected',()=>setTimeout(()=>{if(NET.peer===p&&!p.destroyed){try{p.reconnect();}catch(e){}}},3000));
+  p.on('error',e=>{if(NET.peer!==p||e.type==='peer-unavailable')return;setTimeout(()=>{if(NET.peer===p&&NET.active){try{p.destroy();}catch(x){}NET.peer=null;hostRoom();}},4000);});
+}
+function joinPeer(code){
+  return loadScript('vendor/peerjs.min.js').then(()=>new Promise(res=>{
+    if(NET.peer){try{NET.peer.destroy();}catch(e){}}
+    const p=new Peer(peerOpts());NET.peer=p;let done=false;
+    const fin=msg=>{if(done)return;done=true;clearTimeout(t);if(msg){try{p.destroy();}catch(e){}if(NET.peer===p)NET.peer=null;}res(msg||null);};
+    const t=setTimeout(()=>fin(`Couldn't reach room ${code}. Check the code, and ask your partner to keep ISpy open on their screen.`),20000);
+    p.on('error',e=>fin(e.type==='peer-unavailable'?`Can't find room ${code}. Check the code, and ask your partner to keep ISpy open on their screen.`:'Couldn\'t connect. Check your internet and try again.'));
+    p.on('open',()=>{const conn=p.connect(PEER_PREFIX+code,{serialization:'raw',reliable:true});wireConn(conn);conn.on('open',()=>fin(null));});
+  }),()=>'Couldn\'t load the connection code. Check your internet and try again.');
+}
+function scheduleRejoin(ms=2500){
+  if(NET.host||!NET.active||NET.rejoin||up())return;
+  NET.rejoin=setTimeout(async()=>{const err=await joinPeer(NET.code);NET.rejoin=null;NET.fails=err?(NET.fails||0)+1:0;netStatus();renderOnline();if(err&&NET.active&&!up())scheduleRejoin();},ms);
+}
+let wake=null;
+async function keepAwake(){try{if('wakeLock' in navigator&&!wake){wake=await navigator.wakeLock.request('screen');wake.addEventListener('release',()=>{wake=null;});}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible'||!NET.active)return;keepAwake();
+  if(NET.host){if(!NET.peer||NET.peer.destroyed)hostRoom();else if(NET.peer.disconnected){try{NET.peer.reconnect();}catch(e){}}}
+  else if(!up())scheduleRejoin(0);
+});
+setInterval(()=>{tidyPhotos();if(document.visibilityState!=='visible'||!NET.active)return;if(NET.host){if(!NET.peer||NET.peer.destroyed)hostRoom();}else if(!up())scheduleRejoin();wantPhotos();},6000);
+function hostGot(conn,m){
+  const d=NET.doc;if(!d)return;
+  if(m.t==='hello'){
+    if(d.guest&&d.guest!==m.id){raw({t:'full'},conn);setTimeout(()=>{try{conn.close();}catch(e){}},300);return;}
+    if(NET.conn&&NET.conn!==conn){const old=NET.conn;NET.conn=null;try{old.close();}catch(e){}}
+    NET.conn=conn;conn.guestId=m.id;
+    if(!d.guest||d.names[1]!==String(m.name||'').slice(0,18)){d.guest=m.id;d.names[1]=String(m.name||'Partner').slice(0,18)||'Partner';commit();}
+    else raw({t:'doc',doc:d});
+    netStatus();return;
+  }
+  if(conn!==NET.conn||conn.guestId!==d.guest)return;
+  if(photoMsg(m))return;
+  if(m.t==='intent'&&m.it)apply(1,m.it);
+}
+function commit(){NET.doc.v++;saveDoc();raw({t:'doc',doc:NET.doc});netStatus();renderOnline();}
+function apply(seat,it){
+  const d=NET.doc;if(!it||typeof it!=='object')return;
+  if(it.k==='start'&&seat===0&&d.guest){d.game=newGame();return commit();}
+  if(it.k==='leave'&&seat===1){d.guest=null;d.names[1]='';d.game=null;return commit();}
+  if(it.k==='lobby'&&d.game&&(seat===0||isOver(d.game))){d.game=null;return commit();}
+  if(d.game&&applyGame(d.game,seat,it))commit();
+}
+function guestGot(conn,m){
+  if(photoMsg(m))return;
+  if(m.t==='doc'&&m.doc&&Array.isArray(m.doc.names)){
+    if(!NET.doc||m.doc.v>=NET.doc.v||m.doc.code!==NET.doc.code){NET.doc=m.doc;saveDoc();pruneIntents();netStatus();renderOnline();}
+    if(NET.joinWait){const w=NET.joinWait;NET.joinWait=null;w();}
+  }
+  else if(m.t==='full'){if(NET.joinWait){const w=NET.joinWait;NET.joinWait=null;w('That room already has two players.');}}
+  else if(m.t==='closed'){const who=NET.doc&&NET.doc.names[0]||'Your partner';clearRoom();home();toast(`${who} closed the room.`);}
+}
+/* the guest's saved moves are dropped once the host's document shows them (or they no longer make sense) */
+function stale(it,G){
+  if(!G||it.gid!==G.gid)return true;if(it.round!==G.round)return true;const R=cur(G),g=R.g[1];
+  if(it.k==='send')return !!R.send[1];
+  if(it.k==='guess'||it.k==='clue')return g.done||it.stage!==g.clues;
+  if(it.k==='giveup')return g.done;
+  if(it.k==='allow'){const t=R.g[0].tries[it.idx];return !t||t.ok;}
+  if(it.k==='ready')return G.ready[1];
+  if(it.k==='wipe')return G.wiped;
+  return true;
+}
+function pruneIntents(){
+  const G=NET.doc.game;let ch=false;
+  for(const k of Object.keys(NET.intents)){const it=NET.intents[k];if(k==='leave')continue;if(k==='start'||k==='lobby'||stale(it,G)){delete NET.intents[k];ch=true;}}
+  if(ch)saveIntents();
+}
+function act(it){NET.away=false;if(NET.host){apply(0,it);return;}NET.intents[it.k]=it;saveIntents();raw({t:'intent',it});renderOnline();}
+const pending=k=>{const it=NET.intents[k],G=NET.doc&&NET.doc.game;return it&&G&&!stale(it,G)?it:null;};
+function setRoom(code,host){NET.away=false;NET.code=code;NET.host=host;NET.active=true;NET.key='';NET.fails=0;store.set('room',{code,host});NET.intents=store.get('intents:'+code,{});}
+function clearRoom(){
+  const c=NET.conn,p=NET.peer,code=NET.code;NET.conn=null;NET.peer=null;NET.active=false;clearTimeout(NET.rejoin);NET.rejoin=null;
+  NET.doc=null;NET.intents={};NET.key='';store.set('room',null);if(code){store.set('doc:'+code,null);store.set('intents:'+code,null);}
+  wipeExcept([LOC&&LOC.G&&LOC.G.gid]);
+  setTimeout(()=>{try{c&&c.close();}catch(e){}try{p&&p.destroy();}catch(e){}},300);netStatus();
+}
+function leaveRoom(){if(NET.host)raw({t:'closed'});else raw({t:'intent',it:{k:'leave'}});clearRoom();home();}
+/* photos from older games, or from a game whose time is up, are wiped */
+function tidyPhotos(){const G=NET.doc&&NET.doc.game;const keep=[LOC&&LOC.G&&!photosGone(LOC.G)?LOC.G.gid:null];if(G&&!photosGone(G))keep.push(G.gid);wipeExcept(keep);}
+function bootOnline(){
+  const r=store.get('room',null);if(!r||!r.code)return false;
+  setRoom(r.code,!!r.host);NET.doc=store.get('doc:'+r.code,null);
+  if(NET.host&&!NET.doc){clearRoom();return false;}
+  tidyPhotos();netStatus();
+  if(NET.doc&&NET.doc.game&&isOver(NET.doc.game)){NET.away=true;home();}else renderOnline();
+  if(NET.host)hostRoom();else scheduleRejoin(0);
+  return true;
+}
+function roomName(host,err=''){
+  show(`<h2>${host?'Start a room':'Join a room'}</h2><section class="card stack" style="gap:14px">
+    <label class="f">Your name<input type="text" id="me" maxlength="18" placeholder="Your name" autocomplete="nickname" value="${esc(store.get('me',''))}"></label>
+    ${host?'<p class="hint">You get a four-letter code to give your partner.</p>':'<label class="f">Room code<input type="text" class="code" id="code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD"></label>'}
+    <p class="err" id="err">${err}</p>
+    <div class="row"><button class="btn" id="go">${host?'Open the room':'Join'}</button><button class="link" id="back">Back</button></div></section>`);
+  on('#back','click',home);
+  on('#go','click',async()=>{
+    const me=$('#me').value.trim(),e=$('#err');
+    if(!me){e.textContent='Add your name so your partner knows who they are playing.';return;}
+    store.set('me',me);
+    if(NET.active)leaveRoom();
+    if(host){const code=newCode();setRoom(code,true);NET.doc={v:1,code,names:[me,''],guest:null,game:null};saveDoc();netStatus();renderOnline();hostRoom();return;}
+    const code=$('#code').value.toUpperCase().replace(/[^A-Z]/g,'');
+    if(code.length!==4){e.textContent='Room codes are 4 letters.';return;}
+    const b=$('#go');b.disabled=true;b.textContent='Joining…';e.textContent='';
+    setRoom(code,false);NET.doc=null;
+    let msg=await joinPeer(code);
+    if(!msg)msg=await new Promise(res=>{NET.joinWait=res;setTimeout(()=>{if(NET.joinWait===res){NET.joinWait=null;res('The room didn\'t answer. Try again.');}},10000);});
+    if(msg){clearRoom();b.disabled=false;b.textContent='Join';e.textContent=msg;return;}
+    keepAwake();netStatus();renderOnline();
+  });
+}
+function onlineRematch(){act({k:'start'});}
+function backToRoom(){if(!NET.host&&!up())toast('Can\'t reach the room right now. It\'ll pass it on when it reconnects.');act({k:'lobby',gid:NET.doc&&NET.doc.game&&NET.doc.game.gid});}
+function renderOnline(){
+  if(!NET.active)return;
+  const d=NET.doc,me=ME(),them=1-me;let key,draw;
+  if(!NET.host&&!up()&&(NET.fails||0)>=2){const hn=esc(d&&d.names[0]||'your partner');key='gone';draw=()=>{show(`<section class="sticker ink pass pop">${blobSVG('--p2','sad')}<h2>Can't reach ${hn}'s room</h2>
+      <p class="muted">${hn}'s phone may have closed the game, or the room was closed. It keeps trying in the background and carries on as soon as it gets through.</p>
+      <div class="row c"><button class="btn" id="retry">Try again now</button><button class="btn ghost" id="leave">Leave the room</button></div><button class="link" id="home">Home</button></section>`);
+    on('#retry','click',reconnectNow);on('#leave','click',leaveRoom);on('#home','click',home);};}
+  else if(!d){key='connecting';draw=()=>waitScreen(`Joining room ${esc(NET.code)}…`);}
+  else if(!NET.host&&d.guest&&d.guest!==DEVICE){key='full';draw=()=>{show(`<section class="sticker ink pass">${blobSVG('--p2','sad')}<h2>That room is full</h2><p class="muted">Someone else is playing ${esc(d.names[0])} in room ${esc(NET.code)}.</p><button class="btn" id="leave">OK</button></section>`);on('#leave','click',leaveRoom);};}
+  else if(!d.game){key=`lobby|${d.names.join('|')}|${!!d.guest}|${up()}`;draw=lobby;}
+  else{
+    const G=d.game,R=cur(G);tidyPhotos();
+    const C={G,names:d.names,me,act,menu:home,sent:k=>sendPhoto(k),canAllow:s=>s===me};
+    const pr=pending('ready'),ps=pending('send'),pg=pending('guess')||pending('clue')||pending('giveup');
+    const sig=x=>x.tries.map(t=>t.ok?1:0).join('')+'.'+x.clues+'.'+x.done+'.'+x.pts;
+    if(isOver(G)&&NET.overSeen===G.gid){key=`over|${G.gid}|${G.wiped}`;draw=()=>finalScreen(C,{again:NET.host?onlineRematch:null,room:backToRoom,wipe:()=>act({k:'wipe',gid:G.gid})});}
+    else if(revealed(R)&&(G.ready[me]||pr)){key=`ready|${G.gid}|${G.round}`;draw=()=>waitScreen(`Waiting for ${esc(d.names[them])} to be ready…`);}
+    else if(revealed(R)){key=`rev|${G.gid}|${G.round}|${sig(R.g[0])}|${sig(R.g[1])}`;draw=()=>revealScreen(C,over=>{if(over){NET.overSeen=G.gid;renderOnline();}else act({k:'ready',gid:G.gid,round:G.round});});}
+    else if(!R.send[me]&&!ps){key=`snap|${G.gid}|${G.round}`;draw=()=>snapScreen(C);}
+    else if(!R.send[them]){key=`ws|${G.gid}|${G.round}|${!!R.send[me]}`;draw=()=>waitSend(C);}
+    else if(!R.g[me].done){key=`guess|${G.gid}|${G.round}|${sig(R.g[me])}|${!!pg}`;draw=()=>guessScreen(C,!!pg);}
+    else{key=`wg|${G.gid}|${G.round}|${sig(R.g[me])}|${sig(R.g[them])}|${R.g[them].tries.length}|${pending('allow')?1:0}`;draw=()=>waitGuess(C);}
+  }
+  if(NET.away)return;
+  if(key!==NET.key){NET.key=key;draw();}
+  wantPhotos();
+}
+function lobby(){
+  const d=NET.doc,live=up();
+  if(NET.host){
+    show(`<h2 class="center">Your room</h2><div class="roomcode" aria-label="Room code ${NET.code}">${[...NET.code].map(c=>`<span>${c}</span>`).join('')}</div>
+      <p class="center muted">Your partner opens ISpy on their phone, taps <b>Join a room</b> and types this code.</p>
+      <div class="row c">${d.guest?`${blobSVG('--p2',live?'love':'meh')}<h3>${esc(d.names[1])} ${live?'is here!':'is reconnecting…'}</h3>`:`${blobSVG('--p2','meh','waitblob')}<h3 class="muted">Waiting for your partner…</h3>`}</div>
+      <section class="card stack" style="gap:12px"><p class="muted">Best of 5. Each round you both snap something and guess the other's. First to 3 rounds wins.</p><div class="row"><button class="btn" id="start" ${d.guest?'':'disabled'}>Start on both phones</button></div></section>
+      <div class="row c"><button class="link" id="leave">Close the room</button><button class="link" id="home">Home</button></div>`);
+    on('#start','click',onlineRematch);
+  }else{
+    show(`<section class="sticker ink pass pop">${blobSVG('--p2','happy','waitblob')}<h2>You're in room ${esc(NET.code)}</h2>
+      <p class="muted">The game starts on both phones as soon as ${esc(d.names[0])} taps start.</p>
+      <div class="row c"><button class="link" id="leave">Leave the room</button><button class="link" id="home">Home</button></div></section>`);
+  }
+  on('#leave','click',leaveRoom);on('#home','click',home);
+}
+function waitScreen(text){
+  show(`<section class="sticker ink pass pop">${blobSVG(PV[ME()],'happy','waitblob')}<h2>${text}</h2>
+    <p class="muted">Keep the game open. It moves on by itself, and picks up where it left off if you close it.</p><button class="link" id="wmenu">Room menu</button></section>`);
+  on('#wmenu','click',home);
+}
+const homeBase=home;
+home=function(){homeBase();if(!NET.active)return;NET.away=true;const box=$('.online-box');
+  box.innerHTML=`<h3>You're in room ${esc(NET.code)}</h3>
+    ${up()?'':`<p class="muted">Not connected to ${esc(NET.doc&&NET.doc.names[1-ME()]||'your partner')} right now.</p>`}<div class="row"><button class="btn" id="toroom">Back to the game</button>${up()?'':'<button class="btn ghost" id="recon">Reconnect</button>'}${NET.host&&NET.doc&&NET.doc.game?'<button class="btn ghost" id="endg">End this game</button>':''}<button class="btn ghost" id="leave">${NET.host?'Close the room':'Leave the room'}</button></div>`;
+  on('#recon','click',()=>{reconnectNow();toast('Reconnecting…');});
+  on('#endg','click',()=>{NET.away=false;backToRoom();});
+  on('#toroom','click',()=>{NET.away=false;NET.key='';const G=NET.doc&&NET.doc.game;if(G&&isOver(G))NET.overSeen=G.gid;renderOnline();});on('#leave','click',leaveRoom);};
+
+window.__ispy={isRight,givesAway,applyGame,newGame,cur,tally,isOver,winnerOf,NET,PH,getPhoto,putPhoto,localState:()=>LOC};
+if(!bootOnline()){wipeExcept([]);home();}
+})();
+</script>
+</body>
+</html>
