@@ -194,6 +194,17 @@ textarea{resize:vertical;min-height:120px;font-size:15px;word-break:break-all}
 .hpnum{font-family:var(--display);font-weight:700;font-size:20px;font-variant-numeric:tabular-nums}
 .blob{width:clamp(64px,14vw,96px);height:auto;overflow:visible}
 .blob.hit{animation:hit .5s 2}
+.blob{transform-origin:50% 95%}
+.blob.ouch{animation:ouch .7s cubic-bezier(.3,1.4,.5,1)}
+@keyframes ouch{0%{transform:none}12%{transform:scale(1.28,.68) rotate(-8deg);filter:brightness(1.9)}32%{transform:scale(.84,1.16) rotate(7deg) translateY(-6px)}55%{transform:translateX(-5px) rotate(-5deg)}75%{transform:translateX(4px) rotate(3deg)}100%{transform:none}}
+.owie{position:absolute;left:62%;top:-20px;z-index:4;font-family:"Gaegu","Chalkboard SE","Comic Sans MS",cursive;font-weight:700;font-size:18px;line-height:1;color:#1B1A2E;background:#fff;border:2.5px solid #1B1A2E;border-radius:12px 14px 12px 4px;padding:2px 7px 4px;white-space:nowrap;animation:owie 1.6s forwards;pointer-events:none}
+@keyframes owie{0%{opacity:0;transform:scale(.3) rotate(-15deg)}12%{opacity:1;transform:scale(1.15) rotate(6deg)}25%{transform:scale(1) rotate(-3deg)}80%{opacity:1}100%{opacity:0;transform:translateY(-8px)}}
+.dizzy{position:absolute;left:50%;top:-4px;width:0;height:0;z-index:4;pointer-events:none;animation:dz 1.6s forwards}
+.dizzy i{position:absolute;font-style:normal;font-size:13px;color:#F2B84B;text-shadow:0 0 0 #1B1A2E,1px 1px 0 #1B1A2E;animation:orbit 1s linear infinite}
+.dizzy i:nth-child(2){animation-delay:-.33s}.dizzy i:nth-child(3){animation-delay:-.66s}
+@keyframes orbit{0%{transform:translate(-22px,0) scale(.8)}25%{transform:translate(0,-8px) scale(1)}50%{transform:translate(22px,0) scale(.8)}75%{transform:translate(0,6px) scale(1.2)}100%{transform:translate(-22px,0) scale(.8)}}
+@keyframes dz{0%,80%{opacity:1}100%{opacity:0}}
+
 .blob.win{animation:hop .45s 2}
 @keyframes hit{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px) rotate(-6deg)}75%{transform:translateX(7px) rotate(6deg)}}
 @keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
@@ -313,10 +324,25 @@ function faceSVG(kind,fg){
     wow:'<ellipse cx="30" cy="22" rx="3.5" ry="4.5" fill="none" stroke-width="2.6"/>'}[kind]||'';
   return `<svg viewBox="0 0 60 32" aria-hidden="true" fill="${fg}" stroke="${fg}"><ellipse cx="7" cy="20" rx="5.5" ry="3.2" fill="#FF8FA3" stroke="none" opacity=".6"/><ellipse cx="53" cy="20" rx="5.5" ry="3.2" fill="#FF8FA3" stroke="none" opacity=".6"/>${eyes}${mouth}</svg>`;
 }
-function blobSVG(colVar,kind='happy',cls=''){
-  return `<svg class="blob ${cls}" viewBox="0 0 100 90" aria-hidden="true"><path d="M50 6 C78 4 95 26 93 52 C91 76 72 86 50 85 C26 86 7 76 7 52 C6 26 22 8 50 6Z" fill="var(${colVar})" stroke="var(--ink)" stroke-width="3.5" filter="url(#wobble)"/>
+function blobSVG(colVar,kind='happy',cls='',hurt=0){kind=sadder(kind,hurt);
+  return `<svg class="blob ${cls}" viewBox="0 0 100 90" aria-hidden="true"><path d="M50 6 C78 4 95 26 93 52 C91 76 72 86 50 85 C26 86 7 76 7 52 C6 26 22 8 50 6Z" fill="var(${colVar})" stroke="var(--ink)" stroke-width="3.5" filter="url(#wobble)"/>${hurtSVG(hurt)}
   ${faceSVG(kind,'#282742').replace('<svg ','<svg x="20" y="36" width="60" height="32" ')}</svg>`;
 }
+const HINK='#282742';
+/* ---------- bruises: avatars get more beaten up at 75%, 50% and 25% hearts, and react when hit ---------- */
+const hurtLevel=(hp,max)=>{const f=hp/max;return f>.75?0:f>.5?1:f>.25?2:3;};
+function hurtSVG(h){let s='';
+  if(h>=2)s+=`<ellipse cx="35" cy="47" rx="9.5" ry="8" fill="#7A4FA0" opacity=".5"/><path d="M15 31 l6 4 -3 3 6 4" fill="none" stroke="${HINK}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if(h>=3)s+=`<path d="M9 27 C30 15 70 13 92 25 L92 34 C70 23 30 25 9 37Z" fill="#FFFFFF" stroke="${HINK}" stroke-width="2.2" stroke-linejoin="round"/><path d="M22 25 l3 6 M42 20 l2 6 M62 19 l1 6 M80 22 l-1 6" stroke="#D3CFE2" stroke-width="2"/>
+    <ellipse cx="68" cy="66" rx="7" ry="5" fill="#7A4FA0" opacity=".42"/><path d="M50 4 q4 -6 8 0" fill="none" stroke="${HINK}" stroke-width="2" stroke-linecap="round"/>`;
+  if(h>=1)s+=`<g transform="rotate(-28 75 22)"><rect x="61" y="16" width="30" height="11" rx="5.5" fill="#F3D6B0" stroke="${HINK}" stroke-width="2.2"/><rect x="71" y="17.2" width="10" height="8.6" fill="#E6C092"/><circle cx="74" cy="20" r="1" fill="${HINK}"/><circle cx="78" cy="23" r="1" fill="${HINK}"/></g>`;
+  if(h>=3)s+=`<g transform="rotate(35 22 64)"><rect x="10" y="59" width="24" height="9" rx="4.5" fill="#F3D6B0" stroke="${HINK}" stroke-width="2"/><rect x="18" y="60" width="8" height="7" fill="#E6C092"/></g>`;
+  return s;}
+const sadder=(kind,h)=>kind==='happy'||kind==='idle'?(h>=3?'sad':h>=2?'meh':kind):kind;
+/* swap the avatar in wrap for a squashed, dizzy, "Ow!" version, then settle into its new bruises */
+function ouch(wrap,colVar,hurt,kind='happy'){if(!wrap)return;const old=wrap.querySelector('svg.blob');if(old)old.remove();
+  wrap.insertAdjacentHTML('afterbegin',blobSVG(colVar,'dizzy','ouch',hurt)+`<span class="owie">${['Ow!','Oof!','Ouch!','Eek!','Argh!'][Math.floor(Math.random()*5)]}</span><span class="dizzy" aria-hidden="true"><i>★</i><i>★</i><i>★</i></span>`);
+  setTimeout(()=>{if(!wrap.isConnected)return;const b=wrap.querySelector('svg.blob');if(b)b.outerHTML=blobSVG(colVar,kind,'',hurt);wrap.querySelectorAll('.owie,.dizzy').forEach(e=>e.remove());},1600);}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function cardHTML({hex,label='',cw=190,flipped=false,nameOnly=false,kind,id='',extra=''}){
   const fg=hex&&isLight(hex)?'#282742':'#FFFFFF';
@@ -461,7 +487,7 @@ function duelOutcome(target,picks,round){
 function vsReveal(target,label,picks){
   const {r,m,win,dmg,bull}=duelOutcome(target,picks,VS.round);
   const cw=Math.min(150,Math.floor((innerWidth-80)/3));
-  const col=p=>`<div class="pcol"><div style="position:relative" id="bl${p}">${blobSVG(PV[p],'happy')}</div><div class="pname">${esc(VS.names[p])}</div>${hpBar(p)}
+  const col=p=>`<div class="pcol"><div style="position:relative" id="bl${p}">${blobSVG(PV[p],'happy','',hurtLevel(VS.hp[p],VS.max))}</div><div class="pname">${esc(VS.names[p])}</div>${hpBar(p)}
     ${cardHTML({hex:picks[p],label:'',kind:mood(r[p].dE),flipped:true,id:'pc'+p,cw})}
     <div class="score" id="sc${p}">–</div><div class="de" id="de${p}">&nbsp;</div><div class="verdict" id="vd${p}">&nbsp;</div></div>`;
   show(`<div class="topbar"><span class="pill">Round ${VS.round} · ×${m}</span><span class="pill">${esc(label)}</span></div>
@@ -474,7 +500,7 @@ function vsReveal(target,label,picks){
     let msg;
     if(win<0){msg=`<h3>A perfect tie!</h3><p>Nobody takes damage.</p>`;}
     else{const lose=1-win;VS.hp[lose]-=dmg;
-      const bw=app.querySelector('#bl'+win+' .blob'),bl=app.querySelector('#bl'+lose+' .blob');bw.classList.add('win');bl.classList.add('hit');
+      app.querySelector('#bl'+win+' .blob').classList.add('win');ouch(app.querySelector('#bl'+lose),PV[lose],hurtLevel(Math.max(0,VS.hp[lose]),VS.max));
       app.querySelector('#bl'+lose).insertAdjacentHTML('beforeend',`<div class="dmg">−${dmg}</div>`);
       app.querySelector('#hp'+lose).style.width=Math.max(0,VS.hp[lose]/VS.max*100)+'%';app.querySelector('#hpn'+lose).textContent=`${Math.max(0,Math.round(VS.hp[lose]))} / ${VS.max}`;
       msg=`<h3>${esc(VS.names[win])} hits for ${dmg}!</h3><p>${bull?'Bullseye bonus +10. ':''}${r[win].score.toFixed(1)} vs ${r[lose].score.toFixed(1)}${m>1?`, ×${m} damage`:''}.</p>`;}
@@ -490,7 +516,7 @@ function confetti(){const cs=['#FF9E8A','#FFD966','#8FD6A8','#93C3F0','#C9A0E8',
   return `<div class="confetti" aria-hidden="true">${Array.from({length:26},(_,i)=>`<i style="left:${Math.random()*100}%;background:${cs[i%cs.length]};animation-delay:${(Math.random()*0.9).toFixed(2)}s"></i>`).join('')}</div>`;}
 function vsOver(){
   const w=VS.hp[0]>VS.hp[1]?0:1;
-  show(`${confetti()}<section class="sticker ink pass pop">${blobSVG(PV[w],'love','win')}<h2>${esc(VS.names[w])} wins the duel!</h2>
+  show(`${confetti()}<section class="sticker ink pass pop">${blobSVG(PV[w],'love','win',hurtLevel(VS.hp[w],VS.max))}<h2>${esc(VS.names[w])} wins the duel!</h2>
     <p class="muted">After ${VS.round} round${VS.round>1?'s':''}, with ${Math.max(0,Math.round(VS.hp[w]))} hearts left.</p>
     <div class="hist">${VS.history.map((h,i)=>`<button type="button" class="hcell" aria-label="Open round ${i+1}" ${mvAttr({title:`Colour Duel · round ${i+1}`,target:h.target,label:h.label||'',mixes:[{who:VS.names[0],hex:h.picks[0]},{who:VS.names[1],hex:h.picks[1]}]})}><div class="tri"><i style="background:${h.picks[0]}"></i><i style="background:${h.target}"></i><i style="background:${h.picks[1]}"></i></div>
       <span>R${i+1} · ${h.win<0?'tie':esc(VS.names[h.win])}</span></button>`).join('')}</div>
@@ -612,13 +638,14 @@ function soloReveal(target,label,pick){
     <div class="solo-arena"><div>${cardHTML({hex:target,label,kind:'wow',cw,extra:'cardin'})}<div class="cap">The card</div></div>
       <div style="position:relative" id="mixcol">${cardHTML({hex:pick,label:'',kind:mood(dE),cw,flipped:true,id:'pc'})}<div class="cap">Your mix</div></div></div>
     <div class="stack" style="align-items:center"><div class="score" id="sc">–</div><div class="de">ΔE ${dE.toFixed(1)} · ${verdict(dE)}</div>
-      <div class="hp" style="max-width:320px"><i id="shp" style="width:${Math.max(0,before)/SO.max*100}%;background-color:var(--p1)"></i></div><div class="hpnum" id="shn">${Math.max(0,before)} / ${SO.max}</div></div>
+      <div style="position:relative;width:84px" id="sbl">${blobSVG('--p1','happy','',hurtLevel(Math.max(0,before),SO.max))}</div><div class="hp" style="max-width:320px"><i id="shp" style="width:${Math.max(0,before)/SO.max*100}%;background-color:var(--p1)"></i></div><div class="hpnum" id="shn">${Math.max(0,before)} / ${SO.max}</div></div>
     <div id="out"></div>`);
   later(()=>app.querySelector('#pc').classList.remove('flipped'),400);
   later(()=>{const el=app.querySelector('#sc'),t0=performance.now();const f=t=>{const k=Math.min(1,(t-t0)/700);el.textContent=(score*k).toFixed(1);if(k<1)requestAnimationFrame(f);};requestAnimationFrame(f);},900);
   later(()=>{
     app.querySelector('#shp').style.width=Math.max(0,SO.hp)/SO.max*100+'%';app.querySelector('#shn').textContent=`${Math.max(0,SO.hp)} / ${SO.max}`;
     if(dmg>0)app.querySelector('#mixcol').insertAdjacentHTML('beforeend',`<div class="dmg">−${dmg}</div>`);
+    {const wrap=app.querySelector('#sbl'),hl=hurtLevel(Math.max(0,SO.hp),SO.max);if(dmg>(bull?5:0))ouch(wrap,'--p1',hl,dead?'dizzy':'happy');else wrap.querySelector('.blob').outerHTML=blobSVG('--p1','love','win',hl);}
     const head=nailed?(bull?'Bullseye! Nailed it':'Nailed it!'):dmg<=8?'Close one':'Ouch';
     const line=`${dmg?`You lose ${dmg} heart${dmg>1?'s':''}${m>1?` (×${m})`:''}.`:'No damage.'}${bull?' +5 hearts back for the bullseye.':''}`;
     app.querySelector('#out').innerHTML=`<div class="stack" style="align-items:center"><div class="sticker ink banner pop"><h3>${head}</h3><p>${line}</p></div>
@@ -630,7 +657,7 @@ function soloReveal(target,label,pick){
 function soloOver(){
   const key='best:'+SO.view,prev=store.get(key,0),isBest=SO.nailed>prev;if(isBest)store.set(key,SO.nailed);
   const avg=SO.history.reduce((a,h)=>a+h.score,0)/SO.history.length;
-  show(`${isBest&&SO.nailed?confetti():''}<section class="sticker ink pass pop">${blobSVG('--p1',SO.nailed>=prev&&SO.nailed?'love':'sad',isBest?'win':'')}
+  show(`${isBest&&SO.nailed?confetti():''}<section class="sticker ink pass pop">${blobSVG('--p1',SO.nailed>=prev&&SO.nailed?'love':'dizzy',isBest?'win':'',3)}
     <h2>${isBest&&SO.nailed?'New best! ':''}You nailed ${SO.nailed} colour${SO.nailed===1?'':'s'}</h2>
     <div class="statrow"><div class="sticker ink stat"><b>${SO.level}</b><span>levels</span></div><div class="sticker ink stat"><b>${avg.toFixed(1)}</b><span>average score</span></div><div class="sticker ink stat"><b>${Math.max(prev,SO.nailed)}</b><span>best nailed</span></div></div>
     <div class="hist">${SO.history.map((h,i)=>`<button type="button" class="hcell" aria-label="Open level ${i+1}" ${mvAttr({title:`Solo Streak · level ${i+1}`,target:h.target,label:h.label||'',mixes:[{who:'My mix',hex:h.pick}]})}><div class="tri" style="width:64px"><i style="background:${h.target}"></i><i style="background:${h.pick};flex:1;border-inline:0;border-left:2px solid var(--ink)"></i></div><span>${h.score>=NAILED?'★ ':''}${Math.round(h.score)}</span></button>`).join('')}</div>
