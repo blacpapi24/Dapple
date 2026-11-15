@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dapple</title>
+<meta name="description" content="Dapple: little games for two phones. Hugh and Paddle Draft.">
+<meta name="theme-color" content="#16261F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dapple">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Gaegu:wght@700&display=swap">
+<style>
+/* Layout: a forest floor where patches of coloured light drift and chase your finger; the two games are box lids that tilt, each playing a tiny loop of itself. */
+:root{
+  --floor:#16261F; --light:#F6E99A; --leaf:#8FE0B0; --coral:#FF9E8A; --sky:#93C3F0; --lilac:#C9A0E8;
+  --text:#F2F4EC; --soft:#B7C6BA;
+  --display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:"DM Sans","Helvetica Neue",Arial,system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:var(--floor);color:var(--text);font-family:var(--body);font-size:17px;line-height:1.45;overflow-x:hidden;-webkit-tap-highlight-color:transparent;
+  padding:calc(24px + env(safe-area-inset-top,0px)) max(18px,env(safe-area-inset-right,0px)) calc(36px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))}
+#sky{position:fixed;inset:0;width:100%;height:100%;z-index:0;touch-action:pan-y}
+main{position:relative;z-index:1;max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:22px;pointer-events:none}
+main > *{pointer-events:auto}
+header{display:flex;flex-direction:column;gap:8px;padding:6px 4px 0;pointer-events:none}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(60px,18vw,96px);line-height:.95;margin:0;letter-spacing:-.03em;display:flex;pointer-events:auto;width:max-content;max-width:100%}
+h1 button{all:unset;cursor:pointer;display:inline-block;color:var(--c,var(--light));transition:color .3s;animation:drop .7s cubic-bezier(.3,1.6,.5,1) both;animation-delay:calc(var(--i)*70ms);transform-origin:50% 90%}
+h1 button.jump{animation:jump .55s cubic-bezier(.3,1.5,.5,1)}
+h1 button:focus-visible{outline:3px solid var(--light);outline-offset:2px;border-radius:8px}
+@keyframes drop{from{opacity:0;transform:translateY(-40px) rotate(-12deg)}}
+@keyframes jump{30%{transform:translateY(-22px) rotate(8deg) scale(1.1,.92)}60%{transform:translateY(0) scale(.94,1.08)}}
+#hello{margin:0;color:var(--soft);font-size:18px;min-height:1.45em}
+.game{position:relative;display:flex;gap:16px;align-items:center;text-decoration:none;border-radius:24px;padding:18px;min-height:140px;
+  box-shadow:0 12px 30px rgba(0,0,0,.4);transform:perspective(700px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) scale(var(--s,1));transition:transform .18s ease-out;will-change:transform;
+  animation:rise .6s cubic-bezier(.3,1.4,.5,1) both;overflow:hidden}
+.game:nth-of-type(2){animation-delay:.12s}
+@keyframes rise{from{opacity:0;transform:translateY(30px) rotate(2deg)}}
+.game:active{--s:.97}
+.game:focus-visible{outline:3px solid var(--light);outline-offset:4px}
+.game::after{content:"";position:absolute;inset:0;background:radial-gradient(180px circle at var(--mx,50%) var(--my,-40%),rgba(255,255,255,.28),transparent 70%);pointer-events:none;mix-blend-mode:soft-light}
+.game.pick{animation:pick .5s 2}
+@keyframes pick{50%{transform:scale(1.04) rotate(-1.5deg);box-shadow:0 0 0 5px var(--light),0 12px 30px rgba(0,0,0,.4)}}
+.art{width:96px;height:96px;flex:none;position:relative;display:grid;place-items:center}
+.txt{min-width:0;display:flex;flex-direction:column;gap:4px}
+.game h2{margin:0;font-size:30px;line-height:1}
+.game p{margin:0;font-size:16px}
+.game small{font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.go{align-self:flex-start;margin-top:4px;font-weight:700;font-size:15px;display:inline-flex;gap:6px;align-items:center}
+.go i{display:inline-block;font-style:normal;animation:nudge 1.2s ease-in-out infinite}
+@keyframes nudge{50%{transform:translateX(5px)}}
+
+/* Hugh lid */
+.hue{background:#F5F6F1;color:#282742;border:3px solid #282742;background-image:linear-gradient(rgba(64,104,190,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(64,104,190,.12) 1px,transparent 1px);background-size:22px 22px}
+.hue h2{font-family:"Gaegu","Chalkboard SE","Comic Sans MS",cursive;font-size:40px}
+.hue small{color:#696882}
+.mini{position:absolute;width:52px;height:70px;border:3px solid #282742;border-radius:11px;background:#fff;padding:5px;box-shadow:3px 4px 0 #282742}
+.mini b{display:grid;place-items:center;width:100%;height:100%;border-radius:6px;transition:background-color .9s}
+.mini.a{left:6px;top:8px;transform:rotate(-8deg)}
+.mini.b{right:6px;bottom:6px;transform:rotate(7deg)}
+.mini svg{width:26px}
+#hscore{position:absolute;right:0;top:0;font-family:"Gaegu",cursive;font-weight:700;font-size:20px;background:#FFE27A;border:2.5px solid #282742;border-radius:999px;padding:0 8px;transform:rotate(8deg) scale(0);transition:transform .35s cubic-bezier(.3,1.7,.5,1)}
+#hscore.on{transform:rotate(8deg) scale(1)}
+
+/* Paddle lid */
+.paddle{background:linear-gradient(#1f2f55,#15203a);color:#e8ecf5;border:3px solid #33426a}
+.paddle h2{font-family:var(--display);font-weight:800}
+.paddle small{color:#f2b84b}
+#pad{width:70px;transform-origin:50% 92%;animation:wag 2.4s ease-in-out infinite}
+@keyframes wag{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(12deg)}}
+#pad.up{animation:bid .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes bid{40%{transform:translateY(-14px) rotate(16deg) scale(1.08)}}
+#bid{position:absolute;right:-2px;top:0;font-family:var(--display);font-weight:800;font-size:17px;background:#f2b84b;color:#15203a;border-radius:999px;padding:1px 9px;transform:rotate(6deg);white-space:nowrap}
+#bid.sold{background:#3cc489}
+
+.dice{all:unset;pointer-events:auto;cursor:pointer;align-self:center;font-weight:700;font-size:16px;color:var(--floor);background:var(--light);border-radius:999px;padding:10px 20px;box-shadow:0 6px 0 #a89c4e;transition:transform .1s,box-shadow .1s}
+.dice:active{transform:translateY(4px);box-shadow:0 2px 0 #a89c4e}
+.dice:focus-visible{outline:3px solid var(--leaf);outline-offset:4px}
+.dice span{display:inline-block}
+.dice.roll span{animation:spin .6s}
+@keyframes spin{to{transform:rotate(720deg)}}
+footer{color:var(--soft);font-size:15px;text-align:center;pointer-events:none}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<main>
+  <header><h1 aria-label="Dapple"></h1><p id="hello">Little games for two phones.</p></header>
+  <a class="game hue" href="hue/" aria-label="Hugh, a colour matching game">
+    <div class="art" aria-hidden="true"><div class="mini a"><b id="hc1"><svg viewBox="0 0 60 32" fill="#282742" stroke="#282742"><ellipse cx="7" cy="20" rx="5.5" ry="3.2" fill="#FF8FA3" stroke="none" opacity=".7"/><ellipse cx="53" cy="20" rx="5.5" ry="3.2" fill="#FF8FA3" stroke="none" opacity=".7"/><circle cx="15" cy="11" r="3.6"/><circle cx="45" cy="11" r="3.6"/><path d="M24 20 q6 6 12 0" fill="none" stroke-width="3" stroke-linecap="round"/></svg></b></div><div class="mini b"><b id="hc2"></b></div><span id="hscore">97</span></div>
+    <div class="txt"><small>Colour matching</small><h2>Hugh</h2><p>Mix a colour to match the card. Duel, swap decks, or go solo.</p><span class="go">Play <i>→</i></span></div>
+  </a>
+  <a class="game paddle" href="paddle/" aria-label="Paddle Draft, an auction draft game">
+    <div class="art" aria-hidden="true"><svg id="pad" viewBox="0 0 100 140"><rect x="42" y="70" width="16" height="66" rx="8" fill="#f2b84b"/><ellipse cx="50" cy="46" rx="46" ry="43" fill="#e2522b"/><text x="50" y="62" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="46" fill="#fff">£</text></svg><span id="bid">£1</span></div>
+    <div class="txt"><small>Auction draft · 2 to 6 players</small><h2>Paddle Draft</h2><p>Bid from a £20 budget on a genre's top 10. Biggest total wins.</p><span class="go">Play <i>→</i></span></div>
+  </a>
+  <button class="dice" id="dice" type="button"><span>🎲</span> Can't decide? Pick for us</button>
+  <footer>Tap the light. Add Dapple to your home screen to keep both games in one place.</footer>
+</main>
+<script>
+(()=>{
+const still=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const COLS=['#F6E99A','#8FE0B0','#FF9E8A','#93C3F0','#C9A0E8'];
+/* title: letters you can poke */
+const h1=document.querySelector('h1');
+[...'Dapple'].forEach((ch,i)=>{const b=document.createElement('button');b.type='button';b.textContent=ch;b.style.setProperty('--i',i);b.style.setProperty('--c',i>2?'#8FE0B0':'#F6E99A');b.setAttribute('aria-hidden','true');b.tabIndex=-1;
+  b.addEventListener('click',()=>{b.style.setProperty('--c',COLS[Math.floor(Math.random()*COLS.length)]);b.classList.remove('jump');void b.offsetWidth;b.classList.add('jump');const r=b.getBoundingClientRect();burst(r.left+r.width/2,r.top+r.height/2,6);});
+  h1.appendChild(b);});
+const hr=new Date().getHours();
+document.getElementById('hello').textContent=(hr<5?'Up late? ':hr<12?'Morning. ':hr<18?'Afternoon. ':'Evening. ')+'Little games for two phones.';
+
+/* drifting light that follows your finger */
+const cv=document.getElementById('sky'),x=cv.getContext('2d');let W,H,dpr;
+const blobs=[],sparks=[];const ptr={x:-999,y:-999,on:false};
+function size(){dpr=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;x.setTransform(dpr,0,0,dpr,0,0);if(still)draw();}
+function addBlob(px,py,r){blobs.push({x:px,y:py,r,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,c:COLS[blobs.length%COLS.length],ph:Math.random()*6,born:performance.now()});}
+function burst(px,py,n=9){if(still)return;for(let i=0;i<n;i++){const a=Math.random()*6.28,s=1.5+Math.random()*3.5;sparks.push({x:px,y:py,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,c:COLS[Math.floor(Math.random()*COLS.length)],r:3+Math.random()*5});}
+  sparks.push({ring:true,x:px,y:py,life:1,r:8});}
+function hexA(h,a){const n=parseInt(h.slice(1),16);return `rgba(${n>>16},${n>>8&255},${n&255},${a})`;}
+function draw(t=0){
+  x.clearRect(0,0,W,H);x.globalCompositeOperation='lighter';
+  for(const b of blobs){
+    if(!still){
+      const dx=b.x-ptr.x,dy=b.y-ptr.y,d=Math.hypot(dx,dy)||1;
+      if(ptr.on&&d<260){const f=(260-d)/260*.5;b.vx-=dx/d*f*.25;b.vy-=dy/d*f*.25;} // gather round the finger
+      b.vx+=Math.sin(t/1900+b.ph)*.004;b.vy+=Math.cos(t/2300+b.ph)*.004;b.vx*=.985;b.vy*=.985;b.x+=b.vx;b.y+=b.vy;
+      if(b.x<-b.r)b.x=W+b.r;if(b.x>W+b.r)b.x=-b.r;if(b.y<-b.r)b.y=H+b.r;if(b.y>H+b.r)b.y=-b.r;
+    }
+    const grow=still?1:Math.min(1,(performance.now()-b.born)/500),r=b.r*(1+Math.sin(t/1400+b.ph)*.08)*grow;
+    const g=x.createRadialGradient(b.x,b.y,0,b.x,b.y,r);g.addColorStop(0,hexA(b.c,.30));g.addColorStop(.6,hexA(b.c,.10));g.addColorStop(1,hexA(b.c,0));
+    x.fillStyle=g;x.beginPath();x.arc(b.x,b.y,r,0,7);x.fill();
+  }
+  for(let i=sparks.length-1;i>=0;i--){const s=sparks[i];
+    if(s.ring){s.r+=5;s.life-=.035;x.strokeStyle=hexA('#F6E99A',Math.max(0,s.life)*.7);x.lineWidth=3;x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.stroke();}
+    else{s.x+=s.vx;s.y+=s.vy;s.vy+=.06;s.life-=.022;x.fillStyle=hexA(s.c,Math.max(0,s.life));x.beginPath();x.arc(s.x,s.y,Math.max(0,s.r*s.life),0,7);x.fill();}
+    if(s.life<=0)sparks.splice(i,1);}
+  x.globalCompositeOperation='source-over';
+  if(!still)requestAnimationFrame(draw);
+}
+W=innerWidth;H=innerHeight;for(let i=0;i<11;i++)addBlob(Math.random()*W,Math.random()*H,50+Math.random()*90);
+size();addEventListener('resize',size);if(!still)requestAnimationFrame(draw);
+addEventListener('pointermove',e=>{ptr.x=e.clientX;ptr.y=e.clientY;ptr.on=true;},{passive:true});
+addEventListener('pointerdown',e=>{ptr.x=e.clientX;ptr.y=e.clientY;ptr.on=true;},{passive:true});
+addEventListener('pointerup',e=>{if(e.pointerType!=='mouse')ptr.on=false;});
+document.addEventListener('pointerleave',()=>ptr.on=false);
+cv.addEventListener('pointerdown',e=>{burst(e.clientX,e.clientY);addBlob(e.clientX,e.clientY,40+Math.random()*50);if(blobs.length>20)blobs.shift();if(still)draw();});
+
+/* lids tilt toward your finger */
+document.querySelectorAll('.game').forEach(g=>{
+  const set=e=>{const r=g.getBoundingClientRect(),px=(e.clientX-r.left)/r.width,py=(e.clientY-r.top)/r.height;
+    g.style.setProperty('--ry',(px-.5)*12+'deg');g.style.setProperty('--rx',(.5-py)*10+'deg');g.style.setProperty('--mx',px*100+'%');g.style.setProperty('--my',py*100+'%');};
+  const reset=()=>{g.style.setProperty('--ry','0deg');g.style.setProperty('--rx','0deg');g.style.setProperty('--my','-40%');};
+  if(!still){g.addEventListener('pointermove',set);g.addEventListener('pointerdown',set);}
+  g.addEventListener('pointerleave',reset);g.addEventListener('pointerup',reset);g.addEventListener('pointercancel',reset);
+});
+
+/* Hugh's loop: a card appears, the mix chases it, a score pops */
+const hc1=document.getElementById('hc1'),hc2=document.getElementById('hc2'),hs=document.getElementById('hscore');
+function hueLoop(){const h=Math.floor(Math.random()*360),s=55+Math.random()*30,l=55+Math.random()*15,off=(Math.random()-.5)*26;
+  hc1.style.backgroundColor=`hsl(${h} ${s}% ${l}%)`;hs.classList.remove('on');hc2.style.backgroundColor=`hsl(${(h+140)%360} 30% 70%)`;
+  setTimeout(()=>{hc2.style.backgroundColor=`hsl(${h+off} ${s-4}% ${l+3}%)`;},900);
+  setTimeout(()=>{hs.textContent=Math.round(99-Math.abs(off)*1.3);hs.classList.add('on');},1900);}
+hc1.style.backgroundColor='#F2A65A';hc2.style.backgroundColor='#F0AE6A';hs.classList.add('on');
+if(!still)setInterval(hueLoop,3400);
+
+/* Paddle Draft's loop: the bid climbs, then SOLD */
+const pad=document.getElementById('pad'),bid=document.getElementById('bid');let price=1;
+function bidLoop(){if(bid.classList.contains('sold')){bid.classList.remove('sold');price=1;bid.textContent='£1';return;}
+  price+=1+Math.floor(Math.random()*2);pad.classList.remove('up');void pad.getBoundingClientRect();pad.classList.add('up');
+  if(price>=7+Math.floor(Math.random()*5)){bid.textContent='SOLD £'+price;bid.classList.add('sold');}else bid.textContent='£'+price;}
+if(!still)setInterval(bidLoop,1300);
+
+/* can't decide */
+const dice=document.getElementById('dice'),games=[...document.querySelectorAll('.game')];
+dice.addEventListener('click',()=>{dice.classList.remove('roll');void dice.offsetWidth;dice.classList.add('roll');games.forEach(g=>g.classList.remove('pick'));
+  let n=0;const total=7+Math.floor(Math.random()*2),tick=()=>{games.forEach((g,i)=>g.style.setProperty('--s',i===n%2?'1.03':'.97'));n++;
+    if(n<total)setTimeout(tick,still?0:110+n*25);else{const w=games[(n-1)%2];games.forEach(g=>g.style.setProperty('--s','1'));w.classList.add('pick');const r=w.getBoundingClientRect();burst(r.left+r.width/2,r.top+r.height/2,14);
+      dice.lastChild.textContent=' '+w.querySelector('h2').textContent+' it is! Tap it to play';}};
+  tick();});
+})();
+</script>
+</body>
+</html>
