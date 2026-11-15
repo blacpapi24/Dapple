@@ -1,7 +1,7 @@
 {
   "name": "Dapple",
   "short_name": "Dapple",
-  "description": "Little games for two phones: Hugh, Paddle Draft and Glass Half Full.",
+  "description": "Little games for two phones: Hugh, Paddle Draft, Glass Half Full and What's Your Angle?",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
