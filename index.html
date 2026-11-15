@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Dapple</title>
-<meta name="description" content="Dapple: little games for two phones. Hugh, Paddle Draft, Glass Half Full and What's Your Angle?">
+<meta name="description" content="Dapple: little games for two phones. Hugh, Paddle Draft, Glass Half Full, What's Your Angle? and ISpy">
 <meta name="theme-color" content="#16261F">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -45,6 +45,7 @@ h1 button:focus-visible{outline:3px solid var(--light);outline-offset:2px;border
 .game:nth-of-type(2){animation-delay:.12s}
 .game:nth-of-type(3){animation-delay:.24s}
 .game:nth-of-type(4){animation-delay:.36s}
+.game:nth-of-type(5){animation-delay:.48s}
 @keyframes rise{from{opacity:0;transform:translateY(30px) rotate(2deg)}}
 .game:active{--s:.97}
 .game:focus-visible{outline:3px solid var(--light);outline-offset:4px}
@@ -100,6 +101,19 @@ h1 button:focus-visible{outline:3px solid var(--light);outline-offset:2px;border
 #asvg{width:92px;overflow:visible}
 #adeg{position:absolute;right:-4px;top:4px;font-family:var(--display);font-weight:800;font-size:16px;background:#FFF7EE;color:#1B1A2E;border:2.5px solid #1B1A2E;border-radius:999px;padding:0 8px;transform:rotate(-6deg);font-variant-numeric:tabular-nums;transition:background-color .3s}
 #adeg.hit{background:#6FE3B4}
+/* ISpy lid: a plum darkroom where a polaroid keeps developing a new thing, the points tick down as clues turn over, then someone gets it */
+.sp{background-color:#24132B;color:#FBEFF5;border:3px solid #FFC94D;background-image:radial-gradient(200px 140px at 100% 0%,rgba(255,91,91,.22),transparent 70%),radial-gradient(rgba(255,255,255,.07) 1.1px,transparent 1.6px);background-size:auto,18px 18px}
+.sp h2{font-family:var(--display);font-weight:800;letter-spacing:-.02em;display:flex;flex-wrap:wrap;gap:0 .12em;align-items:center}
+.sp h2 em{font-style:normal;font-family:"Gaegu",cursive;font-weight:700;color:#22152A;background:#FFC94D;border:2.5px solid #22152A;border-radius:10px 13px 9px 14px/13px 9px 14px 10px;padding:0 .14em .04em;transform:rotate(-6deg);box-shadow:2px 3px 0 #12081A;display:inline-block}
+.sp small{color:#FFC94D}
+#ssvg{width:86px;overflow:visible;transform:rotate(-6deg)}
+#sobj{transition:opacity 1.1s,filter 1.1s}
+#sobj.dev{opacity:0;filter:blur(4px)}
+#spts{position:absolute;right:-6px;top:0;font-family:var(--display);font-weight:800;font-size:16px;background:#FFC94D;color:#22152A;border:2.5px solid #22152A;border-radius:999px;padding:0 8px;transform:rotate(7deg);font-variant-numeric:tabular-nums;transition:background-color .3s}
+#spts.hit{background:#3CC489}
+#spts.bump{animation:jump .45s}
+#sclue{position:absolute;left:-6px;bottom:2px;font-family:"Gaegu",cursive;font-weight:700;font-size:15px;background:#FFF8EC;color:#22152A;border:2px solid #22152A;border-radius:8px;padding:0 6px;transform:rotate(-5deg) scale(0);transition:transform .35s cubic-bezier(.3,1.7,.5,1);white-space:nowrap}
+#sclue.on{transform:rotate(-5deg) scale(1)}
 .dice{all:unset;pointer-events:auto;cursor:pointer;align-self:center;font-weight:700;font-size:16px;color:var(--floor);background:var(--light);border-radius:999px;padding:10px 20px;box-shadow:0 6px 0 #a89c4e;transition:transform .1s,box-shadow .1s}
 .dice:active{transform:translateY(4px);box-shadow:0 2px 0 #a89c4e}
 .dice:focus-visible{outline:3px solid var(--leaf);outline-offset:4px}
@@ -142,8 +156,17 @@ footer{color:var(--soft);font-size:15px;text-align:center;pointer-events:none}
       <circle cx="28" cy="70" r="10" fill="#6FE3B4" stroke="#1B1A2E" stroke-width="2.5"/><circle cx="24.5" cy="68.5" r="1.6" fill="#1B1A2E"/><circle cx="31.5" cy="68.5" r="1.6" fill="#1B1A2E"/><path id="amouth" d="M25.5 72.5 q2.5 2.5 5 0" fill="none" stroke="#1B1A2E" stroke-width="1.6" stroke-linecap="round"/></svg><span id="adeg">0°</span></div>
     <div class="txt"><small>Angle duel · 2 players</small><h2>What's your <em>angle?</em></h2><p>Eye up an angle, or draw the roundest circle in The Perfect Round. Closest wins.</p><span class="go">Play <i>→</i></span></div>
   </a>
+  <a class="game sp" href="ispy/" aria-label="ISpy, a photo guessing game">
+    <div class="art" aria-hidden="true"><svg id="ssvg" viewBox="0 0 100 116"><rect x="5" y="6" width="90" height="106" rx="4" fill="#12081A"/><rect x="2" y="2" width="90" height="106" rx="4" fill="#FFF8EC" stroke="#22152A" stroke-width="3"/>
+      <rect x="10" y="10" width="74" height="70" rx="2" fill="#2A1631"/><g id="sobj"></g>
+      <rect x="33" y="-4" width="30" height="11" rx="2" fill="#FFC94D" opacity=".85" transform="rotate(-4 48 1)"/>
+      <path d="M20 94 q8 -4 16 0 t16 0 t16 0" fill="none" stroke="#6B5670" stroke-width="2.5" stroke-linecap="round"/>
+      <g transform="translate(70 70)"><circle r="15" fill="#FFC94D" stroke="#22152A" stroke-width="2.5"/><ellipse cy="-2" rx="9" ry="8" fill="#fff" stroke="#22152A" stroke-width="2"/><g id="seye"><circle cy="-2" r="4.5" fill="#56A6E2"/><circle cy="-2" r="2.4" fill="#22152A"/></g><path d="M-3 8 q3 2.5 6 0" fill="none" stroke="#22152A" stroke-width="1.8" stroke-linecap="round"/></g></svg>
+      <span id="spts">10</span><span id="sclue">clue 1</span></div>
+    <div class="txt"><small>Photo guessing · 2 players</small><h2>i<em>spy</em></h2><p>Snap something, write three clues, and see if they can guess it. Best of 5.</p><span class="go">Play <i>→</i></span></div>
+  </a>
   <button class="dice" id="dice" type="button"><span>🎲</span> Can't decide? Pick for us</button>
-  <footer>Tap the light. Add Dapple to your home screen to keep all four games in one place.</footer>
+  <footer>Tap the light. Add Dapple to your home screen to keep all five games in one place.</footer>
 </main>
 <script>
 (()=>{
@@ -239,6 +262,22 @@ let aT0=0;function aFrame(t){const f=(aTgt-aCur)*.02;aVel=(aVel+f)*.86;aCur+=aVe
   requestAnimationFrame(aFrame);}
 aSet(37);adeg.classList.add('hit');
 if(!still){aCur=0;aPick();setInterval(aPick,2600);requestAnimationFrame(aFrame);}
+
+/* ISpy's loop: a new photo develops, a clue or two turns over and the points drop, then it's guessed */
+const sobj=document.getElementById('sobj'),spts=document.getElementById('spts'),sclue=document.getElementById('sclue'),seye=document.getElementById('seye');
+const SOBJ=[
+  '<ellipse cx="47" cy="58" rx="24" ry="13" fill="#FFD93B" stroke="#22152A" stroke-width="2.5"/><circle cx="56" cy="38" r="12" fill="#FFD93B" stroke="#22152A" stroke-width="2.5"/><path d="M66 38 l9 2 -9 3z" fill="#FF8A3D" stroke="#22152A" stroke-width="2"/><circle cx="58" cy="35" r="2" fill="#22152A"/>',
+  '<rect x="28" y="30" width="34" height="38" rx="4" fill="#FF7D6E" stroke="#22152A" stroke-width="2.5"/><path d="M62 38 q14 0 14 11 t-14 11" fill="none" stroke="#22152A" stroke-width="2.5"/><path d="M36 24 q3 -5 0 -9 M46 24 q3 -5 0 -9" stroke="#CDAECB" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  '<path d="M38 72 h20 l-3 -14 h-14z" fill="#C97B4A" stroke="#22152A" stroke-width="2.5"/><rect x="41" y="24" width="14" height="36" rx="7" fill="#5CC98A" stroke="#22152A" stroke-width="2.5"/><path d="M41 42 h-6 a4 4 0 0 1 -4 -4 v-6" fill="none" stroke="#22152A" stroke-width="2.5"/><circle cx="48" cy="24" r="3" fill="#FF9EC4"/>',
+  '<path d="M26 60 q20 -36 46 -24 q-4 14 -22 24z" fill="#FFE066" stroke="#22152A" stroke-width="2.5"/><path d="M70 37 l5 -4" stroke="#6B4A2E" stroke-width="3" stroke-linecap="round"/>'];
+let sIdx=0,sStep=0,sPts=10;
+function sTick(){const st=sStep%5;sStep++;
+  if(st===0){sobj.classList.add('dev');setTimeout(()=>{sobj.innerHTML=SOBJ[sIdx++%SOBJ.length];sobj.classList.remove('dev');},350);sPts=10;spts.textContent='10';spts.classList.remove('hit');sclue.classList.remove('on');}
+  else if(st===1||st===2){if(Math.random()<.75||st===1){sPts-=2;spts.textContent=sPts;spts.classList.remove('bump');void spts.offsetWidth;spts.classList.add('bump');sclue.textContent='clue '+((10-sPts)/2);sclue.classList.add('on');}}
+  else if(st===3){spts.textContent='✓ +'+sPts;spts.classList.add('hit');}
+  seye.setAttribute('transform',`translate(${(Math.random()-.5)*6} ${(Math.random()-.5)*4})`);}
+sobj.innerHTML=SOBJ[0];sIdx=1;spts.textContent='✓ +8';spts.classList.add('hit');
+if(!still){sStep=0;sTick();setInterval(sTick,1400);}
 
 /* can't decide */
 const dice=document.getElementById('dice'),games=[...document.querySelectorAll('.game')];
