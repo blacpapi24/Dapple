@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Dapple</title>
-<meta name="description" content="Dapple: little games for two phones. Hugh and Paddle Draft.">
+<meta name="description" content="Dapple: little games for two phones. Hugh, Paddle Draft and Glass Half Full.">
 <meta name="theme-color" content="#16261F">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -43,6 +43,7 @@ h1 button:focus-visible{outline:3px solid var(--light);outline-offset:2px;border
   box-shadow:0 12px 30px rgba(0,0,0,.4);transform:perspective(700px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) scale(var(--s,1));transition:transform .18s ease-out;will-change:transform;
   animation:rise .6s cubic-bezier(.3,1.4,.5,1) both;overflow:hidden}
 .game:nth-of-type(2){animation-delay:.12s}
+.game:nth-of-type(3){animation-delay:.24s}
 @keyframes rise{from{opacity:0;transform:translateY(30px) rotate(2deg)}}
 .game:active{--s:.97}
 .game:focus-visible{outline:3px solid var(--light);outline-offset:4px}
@@ -81,6 +82,15 @@ h1 button:focus-visible{outline:3px solid var(--light);outline-offset:2px;border
 #bid{position:absolute;right:-2px;top:0;font-family:var(--display);font-weight:800;font-size:17px;background:#f2b84b;color:#15203a;border-radius:999px;padding:1px 9px;transform:rotate(6deg);white-space:nowrap}
 #bid.sold{background:#3cc489}
 
+/* Glass Half Full lid: navy cutting mat with a hand-inked glass that keeps trying to pour exactly half */
+.gl{background-color:#111B31;color:#EEF1F8;border:3px solid #F2B84B;background-image:linear-gradient(rgba(147,195,240,.1) 1px,transparent 1px),linear-gradient(90deg,rgba(147,195,240,.1) 1px,transparent 1px);background-size:20px 20px}
+.gl h2{font-family:var(--display);font-weight:800;letter-spacing:-.02em;display:flex;flex-wrap:wrap;gap:0 .2em;align-items:center}
+.gl h2 em{font-style:normal;font-family:"Gaegu",cursive;font-weight:700;color:#1B1A2E;background:#F2B84B;border:2.5px solid #1B1A2E;border-radius:10px 13px 9px 14px/13px 9px 14px 10px;padding:0 .14em .04em;transform:rotate(-5deg);box-shadow:2px 3px 0 #070C1A;display:inline-block}
+.gl small{color:#F2B84B}
+#gsvg{width:80px;overflow:visible}
+#gsvg .face{transition:transform .3s}
+#gpct{position:absolute;right:-6px;top:2px;font-family:var(--display);font-weight:800;font-size:16px;background:#FFF7E8;color:#1B1A2E;border:2.5px solid #1B1A2E;border-radius:999px;padding:0 8px;transform:rotate(7deg);font-variant-numeric:tabular-nums;transition:background-color .3s}
+#gpct.hit{background:#F2B84B}
 .dice{all:unset;pointer-events:auto;cursor:pointer;align-self:center;font-weight:700;font-size:16px;color:var(--floor);background:var(--light);border-radius:999px;padding:10px 20px;box-shadow:0 6px 0 #a89c4e;transition:transform .1s,box-shadow .1s}
 .dice:active{transform:translateY(4px);box-shadow:0 2px 0 #a89c4e}
 .dice:focus-visible{outline:3px solid var(--leaf);outline-offset:4px}
@@ -103,8 +113,19 @@ footer{color:var(--soft);font-size:15px;text-align:center;pointer-events:none}
     <div class="art" aria-hidden="true"><svg id="pad" viewBox="0 0 100 140"><rect x="42" y="70" width="16" height="66" rx="8" fill="#f2b84b"/><ellipse cx="50" cy="46" rx="46" ry="43" fill="#e2522b"/><text x="50" y="62" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="46" fill="#fff">£</text></svg><span id="bid">£1</span></div>
     <div class="txt"><small>Auction draft · 2 to 6 players</small><h2>Paddle Draft</h2><p>Bid from a £20 budget on a genre's top 10. Biggest total wins.</p><span class="go">Play <i>→</i></span></div>
   </a>
+  <a class="game gl" href="glass/" aria-label="Glass Half Full, a splitting duel">
+    <div class="art" aria-hidden="true"><svg id="gsvg" viewBox="0 0 100 130"><defs><clipPath id="gbowl"><path d="M18 8 H82 C86 44 78 70 50 78 C22 70 14 44 18 8Z"/></clipPath></defs>
+      <path d="M22 12 H86 C90 48 82 74 54 82 C26 74 18 48 22 12Z" fill="#070C1A"/><path d="M18 8 H82 C86 44 78 70 50 78 C22 70 14 44 18 8Z" fill="#EEF5FF"/>
+      <g clip-path="url(#gbowl)"><g id="gliq" transform="translate(0 80)"><path id="gwave" d="M-40 0 q12 -5 24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 V90 H-40Z" fill="#C9416E"/></g></g>
+      <path d="M18 8 H82 C86 44 78 70 50 78 C22 70 14 44 18 8Z" fill="none" stroke="#1B1A2E" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M47.5 78 V108 C38 109 30 111 27 116 H73 C70 111 62 109 52.5 108 V78" fill="#C8DEFA" stroke="#1B1A2E" stroke-width="4" stroke-linejoin="round"/>
+      <path id="ghalf" d="M10 33 H90" stroke="#F2B84B" stroke-width="3" stroke-dasharray="6 4" stroke-linecap="round" opacity="0"/>
+      <g class="face" id="gface"><circle cx="41" cy="50" r="3" fill="#1B1A2E"/><circle cx="59" cy="50" r="3" fill="#1B1A2E"/><path id="gmouth" d="M45 57 q5 4 10 0" fill="none" stroke="#1B1A2E" stroke-width="2.6" stroke-linecap="round"/>
+      <ellipse cx="33" cy="57" rx="4.5" ry="2.6" fill="#FF8FA3" opacity=".8"/><ellipse cx="67" cy="57" rx="4.5" ry="2.6" fill="#FF8FA3" opacity=".8"/></g></svg><span id="gpct">0%</span></div>
+    <div class="txt"><small>Splitting duel · 2 players</small><h2>Glass <em>half</em> full</h2><p>Cut it down the middle by weight or length, or pour exactly half. Closest wins.</p><span class="go">Play <i>→</i></span></div>
+  </a>
   <button class="dice" id="dice" type="button"><span>🎲</span> Can't decide? Pick for us</button>
-  <footer>Tap the light. Add Dapple to your home screen to keep both games in one place.</footer>
+  <footer>Tap the light. Add Dapple to your home screen to keep all three games in one place.</footer>
 </main>
 <script>
 (()=>{
@@ -179,11 +200,21 @@ function bidLoop(){if(bid.classList.contains('sold')){bid.classList.remove('sold
   if(price>=7+Math.floor(Math.random()*5)){bid.textContent='SOLD £'+price;bid.classList.add('sold');}else bid.textContent='£'+price;}
 if(!still)setInterval(bidLoop,1300);
 
+/* Glass Half Full's loop: pour, overshoot or fall short, then nail exactly half */
+const gliq=document.getElementById('gliq'),gwave=document.getElementById('gwave'),gpct=document.getElementById('gpct'),ghalf=document.getElementById('ghalf'),gmouth=document.getElementById('gmouth');
+const glassY=f=>78-70*f; // f: share of the bowl's height; the bowl is wider at the top, so half the drink sits above half the height
+let gLevel=0,gTarget=0,gStep=0;const gPlan=()=>{const tries=[.3+Math.random()*.25,.62+Math.random()*.2,.5];return tries;};let gSeq=gPlan();
+function gTick(){gTarget=gSeq[gStep%3];gStep++;ghalf.setAttribute('opacity',gStep%3===0?'1':'0');gpct.classList.toggle('hit',gStep%3===0);gmouth.setAttribute('d',gStep%3===0?'M43 56 q7 7 14 0':'M47 58 h6');if(gStep%3===0)gSeq=gPlan();}
+let gw=0;function gFrame(t){gLevel+=(gTarget-gLevel)*.06;gw=(t*.03)%24;gliq.setAttribute('transform',`translate(${-gw} ${glassY(gLevel<=.5?gLevel*1.28:.64+(gLevel-.5)*.72)})`);
+  gpct.textContent=Math.round(gLevel*100)+'%';requestAnimationFrame(gFrame);}
+gliq.setAttribute('transform',`translate(0 ${glassY(.64)})`);gpct.textContent='50%';gpct.classList.add('hit');ghalf.setAttribute('opacity','1');
+if(!still){gTarget=0;gLevel=0;gpct.classList.remove('hit');gTick();setInterval(gTick,1700);requestAnimationFrame(gFrame);}
+
 /* can't decide */
 const dice=document.getElementById('dice'),games=[...document.querySelectorAll('.game')];
 dice.addEventListener('click',()=>{dice.classList.remove('roll');void dice.offsetWidth;dice.classList.add('roll');games.forEach(g=>g.classList.remove('pick'));
-  let n=0;const total=7+Math.floor(Math.random()*2),tick=()=>{games.forEach((g,i)=>g.style.setProperty('--s',i===n%2?'1.03':'.97'));n++;
-    if(n<total)setTimeout(tick,still?0:110+n*25);else{const w=games[(n-1)%2];games.forEach(g=>g.style.setProperty('--s','1'));w.classList.add('pick');const r=w.getBoundingClientRect();burst(r.left+r.width/2,r.top+r.height/2,14);
+  let n=0;const total=7+Math.floor(Math.random()*3),tick=()=>{games.forEach((g,i)=>g.style.setProperty('--s',i===n%games.length?'1.03':'.97'));n++;
+    if(n<total)setTimeout(tick,still?0:110+n*25);else{const w=games[(n-1)%games.length];games.forEach(g=>g.style.setProperty('--s','1'));w.classList.add('pick');const r=w.getBoundingClientRect();burst(r.left+r.width/2,r.top+r.height/2,14);
       dice.lastChild.textContent=' '+w.querySelector('h2').textContent+' it is! Tap it to play';}};
   tick();});
 })();
