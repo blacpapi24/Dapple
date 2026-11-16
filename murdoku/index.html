@@ -650,13 +650,15 @@ function boardSVG(P,S,o={}){
   let s=`<svg id="board" viewBox="-14 -14 ${W+28} ${W+28}" role="img" aria-label="Floor plan, ${n} by ${n}">
   <defs><pattern id="carpet" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="14" height="14" fill="none"/><path d="M0 0 V14" stroke="rgba(255,255,255,.22)" stroke-width="5"/></pattern>
   <pattern id="grass" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M10 20 l3 -8 l3 8 M33 42 l3 -8 l3 8 M38 12 l2 -6 l2 6" fill="none" stroke="#6FAE55" stroke-width="2.5" stroke-linecap="round"/></pattern>
+  <pattern id="blk" width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0 V18" stroke="rgba(21,32,42,.55)" stroke-width="6"/></pattern>
   <pattern id="boards" width="100" height="25" patternUnits="userSpaceOnUse"><path d="M0 24.5 H100 M40 0 V25" stroke="rgba(42,31,26,.07)" stroke-width="2"/></pattern></defs>
   <rect x="-14" y="-14" width="${W+28}" height="${W+28}" rx="14" fill="#F3E2B6"/>`;
   for(let c=0;c<n*n;c++){const x=(c%n)*CELL,y=Math.floor(c/n)*CELL,k=P.room[c],kd=P.kind[k];
     s+=`<rect x="${x}" y="${y}" width="${CELL+.5}" height="${CELL+.5}" fill="${roomTint(P,k)}"/>`;
     s+=`<rect x="${x}" y="${y}" width="${CELL+.5}" height="${CELL+.5}" fill="url(#${kd==='out'?'grass':kd==='carpet'?'carpet':'boards'})"/>`;}
   // helper: shade the free cells in rows and columns someone already stands in
-  if(o.helper!==false)for(let c=0;c<n*n;c++){if(occ.has(c))continue;if(rowsU.has(Math.floor(c/n))||colsU.has(c%n))s+=`<rect x="${(c%n)*CELL}" y="${Math.floor(c/n)*CELL}" width="${CELL}" height="${CELL}" fill="rgba(42,31,26,.16)"/>`;}
+  if(o.helper!==false){let sh='';for(let c=0;c<n*n;c++){if(occ.has(c))continue;if(rowsU.has(Math.floor(c/n))||colsU.has(c%n))sh+=`<rect x="${(c%n)*CELL}" y="${Math.floor(c/n)*CELL}" width="${CELL}" height="${CELL}"/>`;}
+    s+=`<g fill="rgba(21,32,42,.5)">${sh}</g><g fill="url(#blk)">${sh}</g>`;}
   // thin cell lines
   let g='';for(let i=1;i<n;i++){g+=`M${i*CELL} 0 V${W} M0 ${i*CELL} H${W} `;}
   s+=`<path d="${g}" stroke="rgba(42,31,26,.18)" stroke-width="1.5" stroke-dasharray="4 6"/>`;
@@ -681,11 +683,18 @@ function boardSVG(P,S,o={}){
   for(let c=0;c<n*n;c++){const ob=P.obj[c];if(!ob)continue;const x=(c%n)*CELL,y=Math.floor(c/n)*CELL;
     if(occ.has(c))s+=`<g transform="translate(${x+54} ${y+56}) scale(.44)" opacity=".95"><g filter="url(#wob)">${objG(ob)}</g></g>`;
     else s+=`<g transform="translate(${x+9} ${y+9}) scale(.82)"><g filter="url(#wob)">${objG(ob)}</g></g>`;}
+  // a line along each placed person's row and column, so it's clear nobody else fits there
+  if(o.helper!==false){let ln='';pos.forEach(c=>{if(c<0)return;const x=(c%n)*CELL+50,y=Math.floor(c/n)*CELL+50;ln+=`M0 ${y} H${W} M${x} 0 V${W} `;});
+    if(ln)s+=`<path d="${ln}" stroke="rgba(21,32,42,.45)" stroke-width="5" stroke-dasharray="2 10" stroke-linecap="round" fill="none"/>`;}
   // room numbers
   roomOrder(P).forEach(k=>{const c=P.room.indexOf(k),x=(c%n)*CELL,y=Math.floor(c/n)*CELL;s+=`<g class="rno"><circle cx="${x+17}" cy="${y+17}" r="13" fill="#FFF8EA" stroke="${INK}" stroke-width="2.5"/><text x="${x+17}" y="${y+23}" text-anchor="middle" font-family="Bricolage Grotesque,system-ui,sans-serif" font-weight="800" font-size="17" fill="${INK}">${num[k]}</text></g>`;});
   if(o.hl!=null){P.room.forEach((k,c)=>{if(k===o.hl)s+=`<rect class="room-hl" x="${(c%n)*CELL}" y="${Math.floor(c/n)*CELL}" width="${CELL}" height="${CELL}" fill="#FFD23F"/>`;});}
-  // people
+  // pencilled-in maybes: small faded faces in a 3x3 grid inside the square
   const V=n-1;
+  if(S.notes)S.notes.forEach((m,c)=>{if(!m||occ.has(c))return;const x=(c%n)*CELL,y=Math.floor(c/n)*CELL;let i=0;
+    const ps=[];for(let p=0;p<n;p++)if(m>>p&1)ps.push(p);const k=ps.length,g=k===1?1:k<=4?2:3,step=CELL/g,sc=k===1?.62:k<=4?.4:.27;
+    for(const p of ps){const gx=x+step*(i%g)+step/2,gy=y+step*Math.floor(i/g)+step/2;i++;
+      s+=`<g transform="translate(${gx} ${gy}) scale(${sc})" opacity=".85"><circle r="46" fill="#FFF8EA" stroke="${INK}" stroke-width="5" stroke-dasharray="9 7"/><g transform="scale(.82)">${charG(P.people[p].ci,{chalk:p===V})}</g></g>`;}});
   pos.forEach((c,p)=>{if(c<0)return;const x=(c%n)*CELL+50,y=Math.floor(c/n)*CELL+52;
     const cls=['tok',p===o.sel?'sel':'',p===o.fresh?'drop':'',clash.has(p)?'clash':'',o.killer===p?'sel':''].join(' ');
     const lock=S.locked&&S.locked.includes(p);
@@ -700,12 +709,12 @@ function storyHTML(P){const V=P.n-1,v=P.people[V];
   return `<p>${esc(v.full)} was found ${esc(P.occasion)} at ${esc(P.house)}, next to ${esc(P.weapon)}. ${WORDS[P.n-1][0].toUpperCase()+WORDS[P.n-1].slice(1)} guests were about. Every person stood in a different row and a different column. Whoever was alone with ${esc(v.first)} did it.</p>`;}
 
 /* ---------- playing a case (solo and race share this) ---------- */
-function freshState(P){return {pos:new Array(P.n).fill(-1),marks:new Array(P.n*P.n).fill(0),struck:new Array(P.clues.length).fill(0),locked:[],ms:0,hints:0,wrong:0,done:false};}
+function freshState(P){return {pos:new Array(P.n).fill(-1),marks:new Array(P.n*P.n).fill(0),notes:new Array(P.n*P.n).fill(0),struck:new Array(P.clues.length).fill(0),locked:[],ms:0,hints:0,wrong:0,done:false};}
 function brokenClues(P,pos){return P.clues.map((cl,i)=>ENGINE.truth(P,pos,cl)?-1:i).filter(i=>i>=0);}
 function samePos(a,b){return a.length===b.length&&a.every((c,i)=>c===b[i]);}
 /* o: {title, sub, race:true, clock:()=>ms, save:S=>{}, onSolve:(S)=>{}, onBack, lockUntil:()=>ms, onChange:S=>{}, oppHTML:()=>html, hints:true} */
 function playCase(P,S,o){
-  const n=P.n,V=n-1;let sel=-1,mode='place',undo=[],bad=[],fresh=-1,ripple=null,hl=null,lockTimer=null;
+  const n=P.n,V=n-1;if(!S.notes)S.notes=new Array(n*n).fill(0);let sel=-1,mode='place',undo=[],bad=[],fresh=-1,ripple=null,hl=null,lockTimer=null;
   show(`<div class="casebar"><button class="btn ghost small" id="back">‹ ${o.race?'Room':'Cases'}</button><div class="t"><h3>${esc(o.title)}</h3><div class="sub">${esc(o.sub||'')}</div></div><span class="clock" id="clock">0:00</span></div>
     ${o.race?'<div id="opp"></div>':''}
     <details class="file story" ${S.storySeen?'':'open'}><summary class="type" style="cursor:pointer;font-size:14px;color:var(--ink-soft)">Case notes: ${esc(P.house)}</summary>${storyHTML(P)}</details>
@@ -713,7 +722,7 @@ function playCase(P,S,o){
     ${legendHTML(P)}
     <p class="status" id="status"></p>
     <div class="tray" id="tray"></div>
-    <div class="tools"><button class="tool" id="mark" aria-pressed="false"><b>✕</b> Cross off</button><button class="tool" id="undo"><b>↶</b> Undo</button>${o.hints!==false?'<button class="tool" id="hint"><b>🔍</b> Hunch</button>':''}<button class="tool" id="clear">Clear</button></div>
+    <div class="tools"><button class="tool" id="note" aria-pressed="false"><b>✎</b> Pencil</button><button class="tool" id="mark" aria-pressed="false"><b>✕</b> Cross off</button><button class="tool" id="undo"><b>↶</b> Undo</button>${o.hints!==false?'<button class="tool" id="hint"><b>🔍</b> Hunch</button>':''}<button class="tool" id="clear">Clear</button></div>
     <div class="accuse"><button class="btn red wide" id="accuse">Name the killer</button><p class="hint" id="ahint"></p></div>
     <section class="file clues tab" data-tab="Witness statements"><span class="pin"></span><h3>Clues <small>tap one to tick it off</small></h3><div id="clues"></div></section>
     <section class="file rules tab" data-tab="Rules" style="padding:16px"><ol style="margin-top:0">
@@ -725,7 +734,7 @@ function playCase(P,S,o){
   on('#back','click',()=>{save();o.onBack();});
   on('details.story','toggle',e=>{S.storySeen=!e.target.open;save();});
   const save=()=>{if(!o.race&&!S.done)S.ms=o.clock();o.save&&o.save(S);};
-  const snap=()=>{undo.push(JSON.stringify({pos:S.pos,marks:S.marks}));if(undo.length>60)undo.shift();};
+  const snap=()=>{undo.push(JSON.stringify({pos:S.pos,marks:S.marks,notes:S.notes}));if(undo.length>60)undo.shift();};
   function setStatus(html){status.innerHTML=html;}
   function cellInfo(c){const k=P.room[c],ob=P.obj[c],bits=[`<b>${esc(P.roomNames[k])}</b>${P.kind[k]==='carpet'?' (carpeted)':P.kind[k]==='out'?' (outside)':''}`];
     if(ob)bits.push(OBJ_SHORT[ob]+(ENGINE.BLOCK.has(ob)?', nobody can stand here':''));if(P.win[c])bits.push('by a window');return bits.join(' · ');}
@@ -738,6 +747,7 @@ function playCase(P,S,o){
     const acc=$('#accuse');acc.disabled=placed<n||S.done||lockLeft>0;
     $('#ahint').textContent=lockLeft>0?`Wrong accusation. You can accuse again in ${Math.ceil(lockLeft/1000)}s.`:placed<n?`${placed} of ${n} placed. Place everyone, then accuse.`:'Everyone is placed. Who did it?';
     $('#mark').classList.toggle('on',mode==='mark');$('#mark').setAttribute('aria-pressed',mode==='mark');
+    $('#note').classList.toggle('on',mode==='note');$('#note').setAttribute('aria-pressed',mode==='note');
     $('#undo').disabled=!undo.length;const h=$('#hint');if(h){h.disabled=S.hints>=3||S.done;h.innerHTML=`<b>🔍</b> Hunch (${3-S.hints})`;}
     o.onChange&&o.onChange(S);
   }
@@ -745,11 +755,17 @@ function playCase(P,S,o){
     if(S.locked.includes(p))return;snap();
     const other=S.pos.indexOf(c);
     if(other>=0&&other!==p){if(S.locked.includes(other)){undo.pop();toast(`${P.people[other].first} is pinned there by a hunch.`);return;}S.pos[other]=S.pos[p];}
-    S.pos[p]=c;S.marks[c]=0;fresh=p;ripple=c;bad=[];buzz(12);
+    S.pos[p]=c;S.marks[c]=0;S.notes=S.notes.map(m=>m&~(1<<p));fresh=p;ripple=c;bad=[];buzz(12);
   }
   bwrap.addEventListener('click',e=>{
     const t=e.target.closest('.cell');if(!t||S.done)return;const c=+t.dataset.c,occ=S.pos.indexOf(c),ob=P.obj[c];
     if(mode==='mark'){if(occ<0&&!ENGINE.BLOCK.has(ob)){snap();S.marks[c]=S.marks[c]?0:1;buzz(6);}setStatus(cellInfo(c));draw();save();return;}
+    if(mode==='note'){
+      if(sel<0){setStatus('Pick someone below first, then tap squares to pencil them in.');return;}
+      if(ENGINE.BLOCK.has(ob)){setStatus(`Nobody can stand on the ${OBJ_NAMES[ob]}.`);return;}
+      if(occ>=0){setStatus('Someone is already standing there.');return;}
+      snap();S.notes[c]^=1<<sel;buzz(6);
+      setStatus(S.notes[c]>>sel&1?`Pencilled in: <b>${esc(P.people[sel].first)}</b> might be here. Tap again to rub it out.`:`Rubbed out ${esc(P.people[sel].first)}.`);draw();save();return;}
     if(sel>=0){
       if(occ===sel){snap();S.pos[sel]=-1;setStatus(`${esc(P.people[sel].first)} is back in the line-up.`);sel=-1;}
       else if(ENGINE.BLOCK.has(ob)){setStatus(`Nobody can stand on the ${OBJ_NAMES[ob]}.`);hl=P.room[c];buzz([10,40,10]);}
@@ -759,12 +775,14 @@ function playCase(P,S,o){
     draw();save();
   });
   on('#tray','click',e=>{const b=e.target.closest('.chip');if(!b||S.done)return;const p=+b.dataset.p;if(S.locked.includes(p)){toast('That one is pinned by a hunch.');return;}
-    sel=sel===p?-1:p;mode='place';setStatus(sel>=0?`Where was <b>${esc(P.people[p].first)}</b>? Tap a square.`:'');draw();});
+    sel=sel===p?-1:p;if(mode==='mark')mode='place';
+    setStatus(sel<0?'':mode==='note'?`Pencil: tap every square where <b>${esc(P.people[p].first)}</b> might be.`:`Where was <b>${esc(P.people[p].first)}</b>? Tap a square.`);draw();});
   on('#clues','click',e=>{const b=e.target.closest('.clue[data-i]');if(!b)return;const i=+b.dataset.i;S.struck[i]=S.struck[i]?0:1;bad=bad.filter(x=>x!==i);draw();save();});
   app.querySelector('.legend').addEventListener('click',e=>{const sp=e.target.closest('span[data-k]');if(!sp)return;hl=+sp.dataset.k;draw();});
+  on('#note','click',()=>{mode=mode==='note'?'place':'note';setStatus(mode==='note'?(sel>=0?`Pencil: tap every square where <b>${esc(P.people[sel].first)}</b> might be.`:'Pencil: pick someone, then tap the squares where they might be. They show up small and faded.'):'Pencil off. Tap a square to place for real.');draw();});
   on('#mark','click',()=>{mode=mode==='mark'?'place':'mark';sel=-1;setStatus(mode==='mark'?'Tap squares to cross them off. Tap again to undo a cross.':'');draw();});
-  on('#undo','click',()=>{const u=undo.pop();if(!u)return;const d=JSON.parse(u);S.pos=d.pos;S.marks=d.marks;bad=[];sel=-1;draw();save();});
-  on('#clear','click',()=>{if(!S.pos.some((c,p)=>c>=0&&!S.locked.includes(p))&&!S.marks.some(Boolean))return;snap();S.pos=S.pos.map((c,p)=>S.locked.includes(p)?c:-1);S.marks=S.marks.map(()=>0);bad=[];sel=-1;setStatus('Board cleared. Undo brings it back.');draw();save();});
+  on('#undo','click',()=>{const u=undo.pop();if(!u)return;const d=JSON.parse(u);S.pos=d.pos;S.marks=d.marks;S.notes=d.notes||S.notes.map(()=>0);bad=[];sel=-1;draw();save();});
+  on('#clear','click',()=>{if(!S.pos.some((c,p)=>c>=0&&!S.locked.includes(p))&&!S.marks.some(Boolean)&&!S.notes.some(Boolean))return;snap();S.pos=S.pos.map((c,p)=>S.locked.includes(p)?c:-1);S.marks=S.marks.map(()=>0);S.notes=S.notes.map(()=>0);bad=[];sel=-1;setStatus('Board cleared. Undo brings it back.');draw();save();});
   on('#hint','click',()=>{
     if(S.hints>=3)return;const cand=[...Array(n).keys()].filter(p=>S.pos[p]!==P.sol[p]);if(!cand.length)return;
     const p=cand[Math.floor(Math.random()*cand.length)];snap();const c=P.sol[p],other=S.pos.indexOf(c);if(other>=0)S.pos[other]=-1;
@@ -847,7 +865,7 @@ function rulesBox(){
   lb.innerHTML=`<div class="file rules" role="dialog" aria-label="How to play"><span class="pin"></span><h2 style="font-size:30px">How to play</h2>
     <ol><li><b>Everyone gets their own row and column.</b> Nine people, nine rows, nine columns, just like sudoku. The victim counts too.</li>
     <li><b>Read the witness statements.</b> They say where people were: in a room, on a sofa, by a window, north of someone else.</li>
-    <li><b>Tap a person, then tap a square.</b> Shaded squares are in a row or column that's already taken. Use Cross off to rule squares out.</li>
+    <li><b>Tap a person, then tap a square.</b> Shaded squares are in a row or column that's already taken. Use Pencil to jot down where someone might be, and Cross off to rule squares out.</li>
     <li><b>Find the killer.</b> Exactly one suspect was alone in a room with the victim. When everyone is placed, tap Name the killer.</li></ol>
     <p class="type" style="font-size:14px;margin:12px 0 4px">Things in the rooms</p>
     <div class="objs">${ex('chair','stand on it')}${ex('sofa','stand on it')}${ex('bed','stand on it')}${ex('rug','stand on it')}${ex('bench','stand on it')}${ex('flowers','stand on it')}${ex('table','blocked')}${ex('plant','blocked')}${ex('shelf','blocked')}${ex('piano','blocked')}${ex('clock','blocked')}${ex('tree','blocked')}${ex('pond','blocked')}${ex('statue','blocked')}</div>
