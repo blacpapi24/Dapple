@@ -289,32 +289,91 @@ function makeRooms(r,n,K){
   return null;
 }
 function corner(n,c){const r=Math.floor(c/n),k=c%n;return (r===0||r===n-1)&&(k===0||k===n-1);}
+/* room types: what each room is called, how big it tends to be, whether it can be carpeted, and what's in it */
+const ROOM_TYPES=[
+  ['Kitchen','m',0,['table','table','chair','chair','plant']],['Dining Room','ml',0,['table','table','chair','chair','clock']],
+  ['Library','ml',1,['shelf','shelf','shelf','chair','sofa','rug']],['Study','sm',1,['shelf','table','chair','rug']],
+  ['Bedroom','m',1,['bed','bed','chair','rug','plant']],['Guest Room','sm',1,['bed','chair','rug']],['Nursery','sm',1,['bed','rug','plant','chair']],
+  ['Music Room','ml',1,['piano','piano','chair','sofa','rug']],['Ballroom','l',0,['piano','chair','clock','plant']],
+  ['Parlour','m',1,['sofa','sofa','chair','clock','rug','plant']],['Sitting Room','ml',1,['sofa','sofa','chair','rug','plant']],
+  ['Games Room','m',0,['table','table','chair','sofa']],['Bathroom','s',0,['plant','rug']],['Pantry','s',0,['shelf','shelf']],
+  ['Larder','s',0,['shelf','table']],['Cloakroom','s',0,['chair','plant']],['Boot Room','s',0,['chair','shelf']],['Laundry','s',0,['table','chair']],
+  ['Gallery','ml',0,['sofa','chair','plant','clock']],['Office','sm',1,['table','chair','shelf']],['Sun Room','m',0,['plant','plant','chair','sofa']],
+  ['Den','sm',1,['sofa','chair','rug']],['Snug','s',1,['sofa','rug']],['Sewing Room','s',1,['table','chair']],['Trophy Room','m',1,['shelf','clock','chair','rug']]];
+const HALL_TYPES=[['Hallway',['clock','rug','plant','chair']],['Corridor',['rug','plant','chair']],['Landing',['clock','rug','chair']]];
+const OUT_TYPES=[['Garden',['tree','flowers','bench','statue']],['Orchard',['tree','tree','bench']],['Rose Garden',['flowers','flowers','bench','statue']],
+  ['Patio',['bench','flowers','plant']],['Lawn',['statue','bench','tree']],['Duck Pond',['pond','pond','bench','flowers']],['Veg Patch',['flowers','bench']],
+  ['Courtyard',['statue','bench','flowers']],['Terrace',['bench','plant','flowers']]];
 function layout(r,diff){
   const D=DIFFS[diff],n=D.n;
-  for(let t=0;t<200;t++){
-    const K=D.rooms[0]+Math.floor(r()*(D.rooms[1]-D.rooms[0]+1));
-    const room=makeRooms(r,n,K);if(!room)continue;
-    // one or two rooms on the edge of the map are outside (a garden, a yard), some inside rooms are carpeted
-    const edge=new Set();for(let c=0;c<n*n;c++){const a=Math.floor(c/n),b=c%n;if(a===0||b===0||a===n-1||b===n-1)edge.add(room[c]);}
-    const kind=new Array(K).fill('floor');
-    const outs=shuffle(r,[...edge]).slice(0,1+(r()<.55?1:0));outs.forEach(k=>kind[k]='out');
-    shuffle(r,[...Array(K).keys()].filter(k=>kind[k]!=='out')).slice(0,2+Math.floor(r()*2)).forEach(k=>kind[k]='carpet');
-    const out=c=>kind[room[c]]==='out';
-    const obj=new Array(n*n).fill(null),cells=shuffle(r,[...Array(n*n).keys()]);
-    const nb_=Math.round(n*n*(.13+r()*.03)),ns=Math.round(n*n*(.17+r()*.04));
-    let i=0;
-    for(let b=0;b<nb_;b++){const c=cells[i++];obj[c]=pickR(r,out(c)?OUT_BLOCK:IN_BLOCK);}
-    for(let s=0;s<ns;s++){const c=cells[i++];obj[c]=pickR(r,out(c)?OUT_STAND:IN_STAND.filter(o=>o!=='rug'||kind[room[c]]!=='carpet'));}
-    let ok=true;for(let a=0;a<n&&ok;a++){let fr=0,fc=0;for(let b=0;b<n;b++){if(!BLOCK.has(obj[a*n+b]))fr++;if(!BLOCK.has(obj[b*n+a]))fc++;}if(fr<5||fc<5)ok=false;}
-    // every room needs somewhere to stand
+  for(let t=0;t<300;t++){
+    const room=new Array(n*n).fill(-1),kind=[],names=[],items=[];let K=0;
+    // the garden wraps one or two sides of the house
+    const sides=r()<.55?[Math.floor(r()*4)]:(()=>{const a=Math.floor(r()*4);return [a,(a+1)%4];})();
+    const depth={};sides.forEach(sd=>depth[sd]=sides.length===1?2:1+(r()<.5?1:0));
+    const dN=depth[0]||0,dE=depth[1]||0,dS=depth[2]||0,dW=depth[3]||0;
+    const isOut=c=>{const a=Math.floor(c/n),b=c%n;return a<dN||a>=n-dS||b<dW||b>=n-dE;};
+    // outdoor areas: one per side, or a long single side cut in two
+    const outCells=[...Array(n*n).keys()].filter(isOut);
+    const sideOf=c=>{const a=Math.floor(c/n),b=c%n;for(const sd of sides){if(sd===0&&a<dN)return 0;if(sd===2&&a>=n-dS)return 2;}for(const sd of sides){if(sd===1&&b>=n-dE)return 1;if(sd===3&&b<dW)return 3;}return sides[0];};
+    const outAreas=[];
+    if(sides.length===2){sides.forEach(sd=>outAreas.push(outCells.filter(c=>sideOf(c)===sd)));}
+    else if(r()<.5){const sd=sides[0],cut=3+Math.floor(r()*3),along=c=>sd===0||sd===2?c%n:Math.floor(c/n);outAreas.push(outCells.filter(c=>along(c)<cut),outCells.filter(c=>along(c)>=cut));}
+    else outAreas.push(outCells);
+    const otypes=shuffle(r,OUT_TYPES.slice());
+    outAreas.forEach((cells,i)=>{cells.forEach(c=>room[c]=K);kind.push('out');names.push(otypes[i][0]);items.push(otypes[i][1]);K++;});
+    // the house: a rectangle split like a real floor plan, with a couple of rooms joined into L shapes
+    const H0={r:dN,c:dW,h:n-dN-dS,w:n-dW-dE};
+    const want=D.rooms[0]+Math.floor(r()*(D.rooms[1]-D.rooms[0]+1))-K,merges=r()<.4?1:2;
+    let rects=[H0];let hall=r()<.45;
+    while(rects.length<want+merges){
+      const cand=rects.map((q,i)=>[q,i]).filter(([q])=>q.h>=4||q.w>=4||(q.h*q.w>=6&&(q.h>=3||q.w>=3)));if(!cand.length)break;
+      cand.sort((a,b)=>b[0].h*b[0].w-a[0].h*a[0].w+(r()-.5)*6);const [q,i]=cand[0];
+      const vert=q.w>q.h||(q.w===q.h&&r()<.5),len=vert?q.w:q.h;
+      let at;if(hall&&len>=5){at=1+Math.floor(r()*(len-3));hall='used';}else at=len>=4?2+Math.floor(r()*(len-3)):1+Math.floor(r()*(len-1));
+      if(hall==='used')hall=false;
+      const a=vert?{r:q.r,c:q.c,h:q.h,w:at}:{r:q.r,c:q.c,h:at,w:q.w},b=vert?{r:q.r,c:q.c+at,h:q.h,w:q.w-at}:{r:q.r+at,c:q.c,h:q.h-at,w:q.w};
+      rects.splice(i,1,a,b);
+    }
+    let groups=rects.map(q=>[q]);
+    const touch=(a,b)=>(a.c+a.w===b.c||b.c+b.w===a.c)&&a.r<b.r+b.h&&b.r<a.r+a.h||(a.r+a.h===b.r||b.r+b.h===a.r)&&a.c<b.c+b.w&&b.c<a.c+a.w;
+    const full=(a,b)=>(a.r===b.r&&a.h===b.h)||(a.c===b.c&&a.w===b.w);
+    for(let m=0;m<merges&&groups.length>want;m++){
+      const pairs=[];for(let i=0;i<groups.length;i++)for(let j=i+1;j<groups.length;j++){if(groups[i].length>1||groups[j].length>1)continue;const a=groups[i][0],b=groups[j][0];if(touch(a,b)&&!full(a,b)&&a.h*a.w+b.h*b.w<=16)pairs.push([i,j]);}
+      if(!pairs.length)break;const [i,j]=pairs[Math.floor(r()*pairs.length)];groups[i]=groups[i].concat(groups[j]);groups.splice(j,1);
+    }
+    const used=new Set(),hallsLeft=shuffle(r,HALL_TYPES.slice()),pool=shuffle(r,ROOM_TYPES.slice());
+    const firstIn=K;
+    for(const g of groups){
+      const cells=[];g.forEach(q=>{for(let a=q.r;a<q.r+q.h;a++)for(let b=q.c;b<q.c+q.w;b++)cells.push(a*n+b);});
+      cells.forEach(c=>room[c]=K);
+      const size=cells.length,thin=g.length===1&&Math.min(g[0].h,g[0].w)===1&&size>=3,cls=size<=5?'s':size<=11?'m':'l';
+      let nm,it,carpetOK=0;
+      if(thin&&hallsLeft.length){[nm,it]=hallsLeft.shift();carpetOK=1;}
+      else{let ty=pool.find(x=>!used.has(x[0])&&x[1].includes(cls))||pool.find(x=>!used.has(x[0]));used.add(ty[0]);nm=ty[0];carpetOK=ty[2];it=ty[3];}
+      kind.push(carpetOK?'maybe':'floor');names.push(nm);items.push(it);K++;
+    }
+    if(room.some(x=>x<0))continue;
+    // two or three rooms that suit it get carpet
+    const cands=shuffle(r,[...Array(K).keys()].filter(k=>kind[k]==='maybe'));cands.forEach((k,i)=>kind[k]=i<2+Math.floor(r()*2)?'carpet':'floor');
+    if(kind.filter(k=>k==='carpet').length<1)continue;
+    // furnish each room from its own list, keeping at least half of it free to stand on
+    const obj=new Array(n*n).fill(null);
+    for(let k=0;k<K;k++){
+      const cells=shuffle(r,[...Array(n*n).keys()].filter(c=>room[c]===k));let blocked=0;
+      const cnt=Math.max(1,Math.round(cells.length*(kind[k]==='out'?.32:.38)+(r()-.5)*1.5));
+      for(let i=0;i<cnt&&i<cells.length;i++){let o=pickR(r,items[k]);if(o==='rug'&&kind[k]==='carpet')o=pickR(r,items[k].filter(x=>x!=='rug'))||'chair';
+        if(BLOCK.has(o)){if((blocked+1)*2>cells.length)continue;blocked++;}obj[cells[i]]=o;}
+    }
+    let ok=true;for(let a=0;a<n&&ok;a++){let fr=0,fc=0;for(let b=0;b<n;b++){if(!BLOCK.has(obj[a*n+b]))fr++;if(!BLOCK.has(obj[b*n+a]))fc++;}if(fr<4||fc<4)ok=false;}
     for(let k=0;k<K&&ok;k++)if(![...Array(n*n).keys()].some(c=>room[c]===k&&!BLOCK.has(obj[c])))ok=false;
     if(!ok)continue;
-    // windows: on the outside wall of an indoor room, or on a wall between indoors and the garden
+    const out=c=>kind[room[c]]==='out';
     const win=new Array(n*n).fill(0);
     for(let c=0;c<n*n;c++){if(out(c)||BLOCK.has(obj[c]))continue;const a=Math.floor(c/n),b=c%n;
-      const sides=[[1,a===0||out(c-n)],[2,b===n-1||out(c+1)],[4,a===n-1||out(c+n)],[8,b===0||out(c-1)]];
-      for(const [bit,ext] of sides)if(ext&&r()<.32)win[c]|=bit;}
-    return {n,room,obj,win,K,kind};
+      const sd=[[1,a===0||out(c-n)],[2,b===n-1||out(c+1)],[4,a===n-1||out(c+n)],[8,b===0||out(c-1)]];
+      for(const [bit,ext] of sd)if(ext&&r()<.32)win[c]|=bit;}
+    return {n,room,obj,win,K,kind,rnames:names};
   }
 }
 function placeSolution(r,L){
@@ -555,7 +614,7 @@ function objG(o){
   return '';
 }
 function objSVG(o,cls=''){return `<svg viewBox="0 0 100 100" class="${cls}" aria-hidden="true"><g filter="url(#wob)">${objG(o)}</g></svg>`;}
-const ROOM_TINTS=['#F6D9C4','#D2E6D0','#D6DEF4','#F4E4A8','#EAD3E8','#CFE8EE','#F2D0CF','#E2DDCB','#DCEBC0','#F5DDB6','#D8D3F0','#C9E4DA'];
+const ROOM_TINTS=['#F6D9C4','#F0D6E2','#D6DEF4','#F4E4A8','#EAD3E8','#CFE8EE','#F2D0CF','#E2DDCB','#D9E2EC','#F5DDB6','#D8D3F0','#E6E1F5'];
 const CARPET_TINTS=['#C96F6F','#6F8FC9','#9C6FC9','#C99A4E','#5FA39A','#B56A9C'];
 
 /* ---------- small helpers ---------- */
@@ -593,7 +652,7 @@ function dress(P){
   P.people=firsts.map((f,i)=>{let s;do{s=pk(SUR_A)+pk(SUR_B);}while(surs.has(s));surs.add(s);
     const t=r()<.6?pk(TITLES):'';return {first:f,full:(t?t+' ':'')+f+' '+s,ci:chars[i]};});
   const ins=sh(INDOOR),outs=sh(OUTDOOR);let a=0,b=0;
-  P.roomNames=P.kind.map(k=>k==='out'?outs[b++]:ins[a++]);
+  P.roomNames=P.rnames||P.kind.map(k=>k==='out'?outs[b++]:ins[a++]);
   P.house=pk(SUR_A)+pk(['by','ton','wick','ford','more'])+' '+pk(HOUSES);
   P.occasion=pk(OCCASIONS);P.weapon=pk(WEAPONS);
   return P;
@@ -849,7 +908,7 @@ function heroLoop(){const svg=$('#heroBoard');if(!svg)return;let k=Math.floor(Ma
   svg.addEventListener('click',()=>{move();buzz(10);});}
 function stats(){return store.get('stats',{});}
 function home(){
-  const st=stats(),dk='daily-'+today(),dailyDone=(st.daily||[]).includes(today()),dailySaved=store.get('case:'+dk,null);
+  const st=stats(),dk='daily2-'+today(),dailyDone=(st.daily||[]).includes(today()),dailySaved=store.get('case:'+dk,null);
   const tile=(d)=>{const s=st[d]||{},num=store.get('num:'+d,1),saved=store.get('case:'+d+'-'+num,null);
     return `<button class="file tile" data-d="${d}">${miniGrid(d)}<div><h3>${DIFF_INFO[d].name}${saved&&!saved.S.done?'<span class="stamp">in progress</span>':''}</h3><p>${DIFF_INFO[d].sub}</p><div class="meta">Case ${String(num).padStart(3,'0')} · ${s.solved||0} solved${s.best?` · best ${fmt(s.best)}`:''}</div></div><span class="go">›</span></button>`;};
   show(`<section class="hero">${heroSVG()}<h1 class="logo" aria-label="Murdoku">${[...'Murdo'].map((ch,i)=>`<span style="--i:${i}">${ch}</span>`).join('')}<span class="ku" style="--i:6">ku</span></h1>
@@ -889,7 +948,7 @@ function loading(text){
   if(!RM){const m=$('#mag');m.animate([{transform:'translate(-14px,0) rotate(-8deg)'},{transform:'translate(14px,-8px) rotate(8deg)'},{transform:'translate(-14px,0) rotate(-8deg)'}],{duration:1600,iterations:Infinity});}
 }
 async function openSolo(d){
-  const key=d==='daily'?'daily-'+today():d+'-'+store.get('num:'+d,1),diff=d==='daily'?'medium':d;
+  const key=d==='daily'?'daily2-'+today():d+'-'+store.get('num:'+d,1),diff=d==='daily'?'medium':d;
   let saved=store.get('case:'+key,null);
   if(!saved||!saved.P||!saved.P.people){loading(d==='daily'?"Opening today's case":`Opening case ${String(store.get('num:'+d,1)).padStart(3,'0')}`);
     const t=Date.now(),P=await genCase(diff,hashSeed('mdk|'+key));await new Promise(r=>setTimeout(r,Math.max(0,900-(Date.now()-t))));
@@ -1159,7 +1218,7 @@ home=function(){homeBase();if(!NET.active)return;NET.away=true;NET.ctrl=null;con
    Phones can keep an old copy of the page for a while. On opening (and on coming back to the app) it fetches the page
    fresh and compares build stamps. Straight after opening it just reloads; later it offers a button, so nobody is
    pulled out of a case. Everything is saved, so a reload never loses progress. */
-const BUILD='2026-11-16d';
+const BUILD='2026-11-16e';
 let updShown=false;
 async function checkUpdate(boot){
   try{const r=await fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'});if(!r.ok)return;const t=await r.text();const m=t.match(/const BUILD='([^']+)'/);
