@@ -1149,6 +1149,22 @@ home=function(){homeBase();if(!NET.active)return;NET.away=true;NET.ctrl=null;con
   on('#recon','click',()=>{reconnectNow();toast('Reconnecting…');});
   on('#toroom','click',()=>{NET.away=false;NET.key='';renderOnline();});on('#leave','click',leaveRoom);};
 
+/* ---------- stay up to date ----------
+   Phones can keep an old copy of the page for a while. On opening (and on coming back to the app) it fetches the page
+   fresh and compares build stamps. Straight after opening it just reloads; later it offers a button, so nobody is
+   pulled out of a case. Everything is saved, so a reload never loses progress. */
+const BUILD='2026-11-16c';
+let updShown=false;
+async function checkUpdate(boot){
+  try{const r=await fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'});if(!r.ok)return;const t=await r.text();const m=t.match(/const BUILD='([^']+)'/);
+    if(!m||m[1]===BUILD)return;const go=()=>location.replace(location.pathname+'?v='+encodeURIComponent(m[1]));
+    if(boot&&!sessionStorage.getItem('mdk:upd:'+m[1])){try{sessionStorage.setItem('mdk:upd:'+m[1],'1');}catch(e){}go();return;}
+    if(updShown)return;updShown=true;const b=document.createElement('button');b.className='btn';b.textContent='New version ready. Tap to update';
+    b.style.cssText='position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:80;white-space:nowrap';b.onclick=go;document.body.appendChild(b);
+  }catch(e){}
+}
+setTimeout(()=>checkUpdate(true),400);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkUpdate(false);});
 window.__mdk={ENGINE,genCase,dress,NET,CHARS,freshState,samePos};
 if(!bootOnline())home();
 })();
