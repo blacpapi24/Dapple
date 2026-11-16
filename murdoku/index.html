@@ -1,0 +1,1139 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Murdoku</title>
+<meta name="description" content="Murdoku: a murder mystery logic puzzle. Place every suspect on the floor plan, one per row and column, and find who was alone with the victim. Solo cases or a two-phone race.">
+<meta name="theme-color" content="#15202A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dapple">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Gaegu:wght@400;700&family=Special+Elite&display=swap">
+<style>
+/* Layout: a detective's desk at night. Case files are manila folders with typewritten notes and red pins,
+   the floor plan is a pastel blueprint, and suspects are little blobs you drop into rooms (the Dapple family look). */
+:root{
+  --desk:#15202A; --surface:#1E2C38; --surface2:#263847; --line:#3A5163;
+  --text:#F3EFE4; --soft:#AFC0C9; --acc:#FFD23F; --acc-d:#C59A12;
+  --manila:#F3E2B6; --manila2:#EAD39C; --ink:#2A1F1A; --ink-soft:#6E5D4E;
+  --red:#E0483F; --red-d:#A82E27; --good:#3CC489; --bad:#FF6A5F; --chalk:#F7F4EA; --p1:#FF7D6E; --p2:#56A6E2;
+  --display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:"DM Sans","Helvetica Neue",Arial,system-ui,sans-serif;
+  --hand:"Gaegu","Chalkboard SE","Comic Sans MS",cursive;
+  --type:"Special Elite","Courier New",Courier,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{margin:0;color:var(--text);font-family:var(--body);font-size:17px;line-height:1.45;-webkit-tap-highlight-color:transparent;overflow-x:hidden;
+  background-color:var(--desk);
+  background-image:radial-gradient(640px 460px at 85% -10%,rgba(255,210,63,.13),transparent 62%),radial-gradient(600px 480px at 0% 45%,rgba(224,72,63,.08),transparent 60%),
+    linear-gradient(rgba(175,192,201,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(175,192,201,.05) 1px,transparent 1px);
+  background-size:auto,auto,26px 26px,26px 26px;background-attachment:fixed;
+  padding:calc(18px + env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) calc(32px + env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px))}
+body.online{padding-top:calc(56px + env(safe-area-inset-top,0px))}
+#app{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--display);font-weight:800;margin:0;line-height:1.04;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:clamp(28px,8vw,40px)}
+h3{font-size:22px}
+p{margin:0}
+.muted{color:var(--soft)}
+.center{text-align:center}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.c{justify-content:center}
+.stack{display:flex;flex-direction:column;gap:10px}
+.label{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--soft)}
+.hint{font-size:15px;color:var(--soft)}
+.file .hint,.file .muted{color:var(--ink-soft)}
+:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
+
+/* manila case file */
+.file{background:var(--manila);color:var(--ink);border-radius:6px 16px 14px 14px;box-shadow:4px 6px 0 #0B1218,0 14px 30px rgba(0,0,0,.35);position:relative;padding:18px;
+  background-image:radial-gradient(rgba(110,93,78,.10) 1px,transparent 1.4px);background-size:7px 7px}
+.file.tab{margin-top:14px}
+.file.tab::after{content:attr(data-tab);position:absolute;left:18px;top:-24px;height:26px;padding:3px 14px 0;background:var(--manila);border-radius:10px 10px 0 0;font-family:var(--type);font-size:14px;color:var(--ink-soft);white-space:nowrap}
+.pin{position:absolute;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FF8C84,var(--red) 55%,var(--red-d));box-shadow:1px 3px 2px rgba(0,0,0,.35);right:16px;top:-6px;z-index:3}
+.type{font-family:var(--type);letter-spacing:.01em}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+
+.btn{appearance:none;border:0;cursor:pointer;font-family:var(--display);font-weight:700;font-size:19px;line-height:1.1;color:var(--ink);background:var(--acc);
+  border-radius:999px;padding:12px 24px 13px;box-shadow:0 5px 0 var(--acc-d),0 10px 22px rgba(0,0,0,.35);transition:transform .1s,box-shadow .1s,opacity .2s;position:relative;text-decoration:none;display:inline-block}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--acc-d),0 4px 10px rgba(0,0,0,.3)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn.red{background:var(--red);color:#fff;box-shadow:0 5px 0 var(--red-d),0 10px 22px rgba(0,0,0,.35)}
+.btn.ghost{background:transparent;color:var(--text);box-shadow:inset 0 0 0 2px var(--line)}
+.btn.ghost:active{transform:translateY(2px)}
+.file .btn.ghost{color:var(--ink);box-shadow:inset 0 0 0 2.5px var(--ink)}
+.btn.small{font-size:15px;padding:8px 14px 9px}
+.btn.wide{width:100%}
+.link{appearance:none;background:none;border:0;font:inherit;color:var(--soft);text-decoration:underline;text-decoration-color:rgba(175,192,201,.5);text-underline-offset:5px;cursor:pointer;padding:6px}
+.file .link{color:var(--ink-soft)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;padding:6px 12px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);white-space:nowrap}
+
+/* home */
+.hero{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+#heroBoard{width:min(300px,82vw);display:block;overflow:visible;cursor:pointer;touch-action:manipulation}
+#heroBoard .tok{transition:transform .7s cubic-bezier(.4,1.5,.5,1)}
+#heroBoard .chalkfig{animation:breathe 2.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes breathe{50%{opacity:.55}}
+.logo{font-size:clamp(52px,15vw,78px);display:flex;justify-content:center;align-items:baseline;line-height:.95;margin-top:2px}
+.logo span{display:inline-block;animation:drop .7s cubic-bezier(.3,1.6,.5,1) both;animation-delay:calc(var(--i)*55ms)}
+.logo .ku{font-family:var(--hand);font-weight:700;color:var(--ink);background:var(--acc);padding:0 .14em .04em;margin-left:.05em;border-radius:12px 16px 11px 17px/16px 11px 17px 12px;rotate:-6deg;box-shadow:3px 4px 0 #0B1218;border:3px solid var(--ink)}
+@keyframes drop{from{opacity:0;transform:translateY(-36px) rotate(-10deg)}}
+.tag{font-size:17px;color:var(--soft);max-width:34ch}
+.tag i{font-family:var(--hand);font-style:normal;font-size:21px;color:var(--text)}
+.tiles{display:grid;grid-template-columns:1fr;gap:12px}
+.tile{appearance:none;font:inherit;text-align:left;cursor:pointer;display:flex;gap:14px;align-items:center;border:0;transition:transform .18s;width:100%}
+.tile:nth-child(odd){rotate:-.5deg}.tile:nth-child(even){rotate:.4deg}
+.tile:active{transform:scale(.98)}
+.tile h3{font-size:21px}
+.tile p{font-size:14px;color:var(--ink-soft);line-height:1.3}
+.tile .meta{font-family:var(--type);font-size:13px;color:var(--ink-soft);margin-top:3px}
+.tile .gridpic{width:58px;height:58px;flex:none}
+.tile .go{margin-left:auto;font-weight:800;font-size:22px;flex:none}
+.stamp{font-family:var(--type);font-size:12px;color:var(--red);border:2px solid var(--red);border-radius:4px;padding:1px 6px;rotate:-8deg;display:inline-block;margin-left:6px;vertical-align:2px}
+.online-box{display:flex;flex-direction:column;gap:12px}
+
+/* forms */
+label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:15px;flex:1 1 200px;min-width:0}
+input[type=text]{font:inherit;font-size:20px;padding:12px 14px;border-radius:14px;border:2px solid var(--line);background:var(--surface2);color:var(--text);width:100%}
+input.code{text-transform:uppercase;letter-spacing:.3em;font-family:var(--display);font-weight:800;font-size:28px;text-align:center}
+.err{color:var(--bad);font-weight:700;min-height:1.2em;font-size:15px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.seg button{appearance:none;font:inherit;cursor:pointer;border-radius:14px;border:2px solid var(--line);background:var(--surface2);color:var(--text);padding:10px 6px;font-weight:700;line-height:1.2}
+.seg button small{display:block;font-weight:500;color:var(--soft);font-size:12px}
+.seg button.on{background:var(--acc);border-color:var(--acc);color:var(--ink)}
+.seg button.on small{color:var(--ink-soft)}
+.roomcode{display:flex;justify-content:center;gap:10px}
+.roomcode span{font-family:var(--display);font-weight:800;font-size:44px;width:60px;height:72px;display:grid;place-items:center;background:var(--manila);color:var(--ink);border-radius:12px;box-shadow:3px 4px 0 #0B1218;animation:drop .6s cubic-bezier(.3,1.6,.5,1) both}
+.roomcode span:nth-child(2){animation-delay:.08s}.roomcode span:nth-child(3){animation-delay:.16s}.roomcode span:nth-child(4){animation-delay:.24s}
+
+/* the case screen */
+.casebar{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.casebar .t{min-width:0}
+.casebar h3{font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.casebar .sub{font-family:var(--type);font-size:13px;color:var(--soft)}
+.clock{font-family:var(--display);font-weight:800;font-size:20px;font-variant-numeric:tabular-nums;background:var(--manila);color:var(--ink);border-radius:10px;padding:3px 10px;box-shadow:2px 3px 0 #0B1218;flex:none}
+.clock.lock{background:var(--red);color:#fff}
+.story{padding:14px 16px 14px;font-size:16px}
+.story p{font-family:var(--type);font-size:15px;line-height:1.5}
+.story .who{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.boardwrap{position:relative;filter:drop-shadow(4px 6px 0 #0B1218)}
+#board{width:100%;display:block;touch-action:manipulation;user-select:none;-webkit-user-select:none;border-radius:10px;overflow:visible}
+#board .cell{cursor:pointer}
+#board .tok{transform-box:fill-box;transform-origin:center}
+#board .tok.drop{animation:tokdrop .45s cubic-bezier(.3,1.7,.5,1)}
+@keyframes tokdrop{0%{transform:translateY(-40%) scale(1.25);opacity:.2}100%{transform:none;opacity:1}}
+#board .tok.sel{animation:lift 1s ease-in-out infinite}
+@keyframes lift{50%{transform:translateY(-7%) scale(1.06)}}
+#board .tok.clash .ring{stroke:var(--bad);stroke-width:7;animation:clash .5s ease-in-out 2}
+@keyframes clash{50%{opacity:.3}}
+#board .ripple{transform-box:fill-box;transform-origin:center;animation:ripple .5s ease-out forwards;pointer-events:none}
+@keyframes ripple{from{transform:scale(.3);opacity:.9}to{transform:scale(1.25);opacity:0}}
+#board .room-hl{animation:roomhl 1.1s ease-out forwards;pointer-events:none}
+@keyframes roomhl{0%{opacity:.75}100%{opacity:0}}
+.compass{position:absolute;right:-6px;top:-14px;width:38px;height:38px;background:var(--manila);border-radius:50%;box-shadow:2px 3px 0 #0B1218;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:12px;color:var(--ink);z-index:2;pointer-events:none}
+.compass svg{width:30px;height:30px}
+.legend{display:flex;flex-wrap:wrap;gap:6px}
+.legend span{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:3px 10px 3px 4px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);cursor:pointer}
+.legend i{width:16px;height:16px;border-radius:5px;display:inline-block;border:2px solid var(--ink)}
+.tray{display:flex;flex-wrap:wrap;gap:8px}
+.chip{appearance:none;font:inherit;cursor:pointer;display:flex;align-items:center;gap:6px;padding:4px 12px 4px 4px;border-radius:999px;border:2px solid var(--line);background:var(--surface2);color:var(--text);font-weight:700;font-size:14px;transition:transform .15s,background .2s,opacity .2s}
+.chip svg{width:32px;height:32px;flex:none}
+.chip.sel{background:var(--acc);color:var(--ink);border-color:var(--acc);transform:translateY(-3px) rotate(-2deg)}
+.chip.placed{opacity:.5}
+.chip.placed.sel{opacity:1}
+.chip.locked{opacity:.4;cursor:default}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tool{appearance:none;font:inherit;cursor:pointer;display:inline-flex;gap:6px;align-items:center;padding:8px 14px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--text);font-weight:700;font-size:14px}
+.tool.on{background:var(--chalk);color:var(--ink);border-color:var(--chalk)}
+.tool:disabled{opacity:.4;cursor:default}
+.tool b{font-family:var(--display);font-size:17px}
+.status{font-size:15px;color:var(--soft);min-height:1.45em}
+.status b{color:var(--text)}
+.clues{display:flex;flex-direction:column;gap:8px;padding:14px 12px 12px}
+.clues h3{font-size:18px;display:flex;justify-content:space-between;align-items:baseline;padding:0 4px}
+.clues h3 small{font-family:var(--type);font-size:12px;font-weight:400;color:var(--ink-soft)}
+.clue{appearance:none;font:inherit;text-align:left;cursor:pointer;display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.45);border:1.5px dashed rgba(110,93,78,.45);color:var(--ink);font-family:var(--type);font-size:15px;line-height:1.35;transition:opacity .25s,background .25s,transform .2s;position:relative;width:100%}
+.clue .faces{display:flex;flex:none}
+.clue .faces svg{width:30px;height:30px}
+.clue .faces svg+svg{margin-left:-10px}
+.clue .no{font-family:var(--display);font-weight:800;font-size:13px;color:var(--ink-soft);flex:none;width:18px}
+.clue b{font-weight:400;padding:0 3px;border-radius:4px;box-shadow:inset 0 -.45em 0 var(--hl,rgba(255,210,63,.6))}
+.clue.done{opacity:.45}
+.clue.done span.txt{text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:var(--red)}
+.clue.bad{background:#FFD9D3;border-color:var(--red);border-style:solid;animation:shake .4s 2}
+.clue.bad::after{content:"doesn't fit";position:absolute;right:8px;top:-9px;font-family:var(--hand);font-weight:700;font-size:15px;background:var(--red);color:#fff;padding:0 6px;border-radius:6px;rotate:3deg}
+.clue.rule{background:rgba(42,31,26,.07);border-style:solid}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.accuse{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.accuse .hint{text-align:center}
+
+/* overlays */
+.lb{position:fixed;inset:0;background:rgba(9,14,19,.72);display:grid;place-items:center;padding:18px;z-index:50;animation:fade .2s}
+@keyframes fade{from{opacity:0}}
+.lb .file{width:min(520px,100%);max-height:92vh;overflow:auto;animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{from{transform:scale(.85) rotate(-2deg);opacity:0}}
+.pop{animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
+.lineup{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}
+.lineup button{appearance:none;font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:12px;border:2px solid var(--ink);background:rgba(255,255,255,.5);color:var(--ink);font-weight:700;font-size:13px;line-height:1.15;text-align:center;transition:transform .15s}
+.lineup button:active{transform:scale(.95)}
+.lineup svg{width:58px;height:58px}
+.lineup button:hover svg{animation:lift 1s ease-in-out infinite}
+.bigstamp{position:fixed;left:50%;top:40%;z-index:60;font-family:var(--type);font-size:clamp(34px,11vw,56px);color:var(--red);border:6px double var(--red);border-radius:10px;padding:6px 18px;background:rgba(243,226,182,.92);
+  transform:translate(-50%,-50%) rotate(-12deg);animation:stampin .5s cubic-bezier(.2,1.6,.4,1) both;pointer-events:none;white-space:nowrap;text-align:center;line-height:1.1}
+.bigstamp.no{color:var(--ink);border-color:var(--ink)}
+@keyframes stampin{0%{transform:translate(-50%,-50%) rotate(-12deg) scale(2.6);opacity:0}100%{opacity:1}}
+.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:70;max-width:min(92vw,460px);text-align:center;padding:10px 16px;font-size:15px;font-weight:700}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:55;overflow:hidden}
+.confetti i{position:absolute;top:-20px;width:10px;height:14px;border-radius:2px;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+
+/* race */
+.opp{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:14px;background:var(--surface);border:1px solid var(--line)}
+.opp svg{width:34px;height:34px;flex:none}
+.opp .bar{flex:1;height:12px;border-radius:999px;background:var(--surface2);overflow:hidden;border:1px solid var(--line)}
+.opp .bar i{display:block;height:100%;background:var(--p2);border-radius:999px;transition:width .5s cubic-bezier(.3,1.5,.5,1)}
+.opp .n{font-family:var(--display);font-weight:800;font-size:15px;white-space:nowrap}
+.countdown{font-family:var(--display);font-weight:800;font-size:120px;text-align:center;color:var(--acc);animation:pop .5s cubic-bezier(.3,1.6,.5,1);line-height:1}
+.tally{display:flex;justify-content:center;gap:16px;align-items:center;font-family:var(--display);font-weight:800;font-size:26px}
+.tally small{font-size:14px;font-weight:700;color:var(--soft);display:block;text-align:center}
+.file .tally small{color:var(--ink-soft)}
+.results{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.results div{background:rgba(255,255,255,.4);border-radius:12px;padding:10px;text-align:center}
+.results b{display:block;font-family:var(--display);font-size:24px}
+#net{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;appearance:none;border:1px solid var(--line);font:inherit;font-size:13px;font-weight:700;padding:7px 14px;border-radius:999px;background:var(--surface);color:var(--good);cursor:pointer;white-space:nowrap;max-width:94vw;overflow:hidden;text-overflow:ellipsis}
+#net.lost{color:var(--acc)}
+.back{text-align:center;margin:26px 0 0;font-size:15px}
+.back a{color:var(--soft);text-underline-offset:4px}
+
+/* rules */
+.rules ol{margin:8px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:8px;font-size:16px}
+.rules li::marker{font-family:var(--display);font-weight:800}
+.objs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.objs div{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px;font-weight:700;background:rgba(255,255,255,.45);border-radius:10px;padding:8px 4px;text-align:center;line-height:1.2}
+.objs div small{font-weight:500;color:var(--ink-soft);font-size:12px}
+.objs svg{width:42px;height:42px}
+.dot{width:120px;cursor:pointer;touch-action:manipulation}
+.dot .lid{transform-box:fill-box;transform-origin:50% 0;animation:blink 4.8s infinite}
+@keyframes blink{0%,92%,100%{transform:scaleY(0)}95%{transform:scaleY(1)}}
+.dot .look{transition:transform .18s ease-out}
+.dot.jump{animation:jumpy .55s cubic-bezier(.3,1.5,.5,1)}
+@keyframes jumpy{35%{transform:translateY(-16px) rotate(-6deg)}70%{transform:translateY(0) scale(1.05,.95)}}
+@media (max-width:380px){.chip{font-size:13px;padding-right:9px}.chip svg{width:28px;height:28px}.clue{font-size:14px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="wob" x="-10%" y="-10%" width="120%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="3" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+<main id="app" aria-live="polite"></main>
+<p class="back"><a href="../">‹ All games on Dapple</a></p>
+<script>
+(()=>{
+'use strict';
+/*ENGINE*/
+function ENGINE_FACTORY(){
+function rng(seed){let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const pickR=(r,a)=>a[Math.floor(r()*a.length)];
+function shuffle(r,a){for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+const IN_BLOCK=['table','plant','shelf','piano','clock'],IN_STAND=['chair','sofa','bed','rug'];
+const OUT_BLOCK=['tree','pond','statue'],OUT_STAND=['bench','flowers'];
+const BLOCK=new Set([...IN_BLOCK,...OUT_BLOCK]);
+const DIFFS={
+  easy:{n:9,rooms:[8,9],
+    w:{in:6,notin:1,on:5,by:2,win:2,nowin:.5,corner:3,out:3,inside:1,carpet:3,same:2,diff:.5,north:.4,west:.4,diag:1,alone:3,empty:3,count:2}},
+  medium:{n:9,rooms:[9,10],
+    w:{in:2.5,notin:2,on:3,by:3,win:2,nowin:1.5,corner:2,out:2,inside:2,carpet:2,same:2.5,diff:2,north:1.5,west:1.5,diag:2,alone:2,empty:2,count:2}},
+  hard:{n:9,rooms:[10,11],
+    w:{in:.5,notin:3,on:2,by:3,win:2,nowin:3,corner:1,out:1.5,inside:3,carpet:1.5,same:2,diff:3,north:3,west:3,diag:3,alone:2,empty:1,count:3}}
+};
+const UNARY=new Set(['in','notin','on','by','win','nowin','corner','out','inside','carpet']);
+const PAIR=new Set(['same','diff','north','west','diag']);
+function nb(n,c){const r=Math.floor(c/n),k=c%n,o=[];if(r>0)o.push(c-n);if(k<n-1)o.push(c+1);if(r<n-1)o.push(c+n);if(k>0)o.push(c-1);return o;}
+
+function makeRooms(r,n,K){
+  for(let t=0;t<400;t++){
+    const room=new Array(n*n).fill(-1),size=new Array(K).fill(1);
+    shuffle(r,[...Array(n*n).keys()]).slice(0,K).forEach((c,i)=>room[c]=i);
+    let left=n*n-K,stuck=0;
+    while(left>0&&stuck<5000){
+      // grow the smallest-ish room most often
+      const order=[...Array(K).keys()].sort((a,b)=>size[a]-size[b]+(r()-.5)*3);
+      let grew=false;
+      for(const id of order){
+        const cand=[];
+        for(let c=0;c<n*n;c++)if(room[c]===id)for(const d of nb(n,c))if(room[d]<0){const same=nb(n,d).filter(e=>room[e]===id).length;cand.push([d,same*same+r()*.8]);}
+        if(!cand.length)continue;
+        cand.sort((a,b)=>b[1]-a[1]);const d=cand[Math.floor(r()*Math.min(2,cand.length))][0];
+        room[d]=id;size[id]++;left--;grew=true;break;
+      }
+      if(!grew)stuck++;
+    }
+    if(left>0)continue;
+    const avg=n*n/K;
+    if(Math.min(...size)<3||Math.max(...size)>avg*1.9)continue;
+    return room;
+  }
+  return null;
+}
+function corner(n,c){const r=Math.floor(c/n),k=c%n;return (r===0||r===n-1)&&(k===0||k===n-1);}
+function layout(r,diff){
+  const D=DIFFS[diff],n=D.n;
+  for(let t=0;t<200;t++){
+    const K=D.rooms[0]+Math.floor(r()*(D.rooms[1]-D.rooms[0]+1));
+    const room=makeRooms(r,n,K);if(!room)continue;
+    // one or two rooms on the edge of the map are outside (a garden, a yard), some inside rooms are carpeted
+    const edge=new Set();for(let c=0;c<n*n;c++){const a=Math.floor(c/n),b=c%n;if(a===0||b===0||a===n-1||b===n-1)edge.add(room[c]);}
+    const kind=new Array(K).fill('floor');
+    const outs=shuffle(r,[...edge]).slice(0,1+(r()<.55?1:0));outs.forEach(k=>kind[k]='out');
+    shuffle(r,[...Array(K).keys()].filter(k=>kind[k]!=='out')).slice(0,2+Math.floor(r()*2)).forEach(k=>kind[k]='carpet');
+    const out=c=>kind[room[c]]==='out';
+    const obj=new Array(n*n).fill(null),cells=shuffle(r,[...Array(n*n).keys()]);
+    const nb_=Math.round(n*n*(.13+r()*.03)),ns=Math.round(n*n*(.17+r()*.04));
+    let i=0;
+    for(let b=0;b<nb_;b++){const c=cells[i++];obj[c]=pickR(r,out(c)?OUT_BLOCK:IN_BLOCK);}
+    for(let s=0;s<ns;s++){const c=cells[i++];obj[c]=pickR(r,out(c)?OUT_STAND:IN_STAND.filter(o=>o!=='rug'||kind[room[c]]!=='carpet'));}
+    let ok=true;for(let a=0;a<n&&ok;a++){let fr=0,fc=0;for(let b=0;b<n;b++){if(!BLOCK.has(obj[a*n+b]))fr++;if(!BLOCK.has(obj[b*n+a]))fc++;}if(fr<5||fc<5)ok=false;}
+    // every room needs somewhere to stand
+    for(let k=0;k<K&&ok;k++)if(![...Array(n*n).keys()].some(c=>room[c]===k&&!BLOCK.has(obj[c])))ok=false;
+    if(!ok)continue;
+    // windows: on the outside wall of an indoor room, or on a wall between indoors and the garden
+    const win=new Array(n*n).fill(0);
+    for(let c=0;c<n*n;c++){if(out(c)||BLOCK.has(obj[c]))continue;const a=Math.floor(c/n),b=c%n;
+      const sides=[[1,a===0||out(c-n)],[2,b===n-1||out(c+1)],[4,a===n-1||out(c+n)],[8,b===0||out(c-1)]];
+      for(const [bit,ext] of sides)if(ext&&r()<.32)win[c]|=bit;}
+    return {n,room,obj,win,K,kind};
+  }
+}
+function placeSolution(r,L){
+  const n=L.n;
+  for(let t=0;t<2000;t++){
+    const cols=new Array(n),used=new Set();
+    const go=row=>{if(row===n)return true;for(const k of shuffle(r,[...Array(n).keys()])){if(used.has(k)||BLOCK.has(L.obj[row*n+k]))continue;used.add(k);cols[row]=k;if(go(row+1))return true;used.delete(k);}return false;};
+    if(!go(0))continue;
+    const cellsOf=shuffle(r,cols.map((k,row)=>row*n+k));
+    // person n-1 is the victim; the murder rule: exactly one suspect shares the victim's room
+    const vr=L.room[cellsOf[n-1]],with_=cellsOf.slice(0,n-1).filter(c=>L.room[c]===vr).length;
+    if(with_!==1)continue;
+    return cellsOf;
+  }
+  return null;
+}
+const RC=(n,c)=>[Math.floor(c/n),c%n];
+function adjObjs(L,c){const s=new Set();for(const d of nb(L.n,c))if(L.obj[d])s.add(L.obj[d]);return s;}
+function truth(L,pos,cl){
+  const n=L.n;
+  switch(cl.t){
+    case 'in':return L.room[pos[cl.p]]===cl.room;
+    case 'notin':return L.room[pos[cl.p]]!==cl.room;
+    case 'on':return L.obj[pos[cl.p]]===cl.o;
+    case 'by':return adjObjs(L,pos[cl.p]).has(cl.o);
+    case 'win':return !!L.win[pos[cl.p]];
+    case 'nowin':return !L.win[pos[cl.p]]&&L.kind[L.room[pos[cl.p]]]!=='out';
+    case 'corner':return corner(n,pos[cl.p]);
+    case 'out':return L.kind[L.room[pos[cl.p]]]==='out';
+    case 'inside':return L.kind[L.room[pos[cl.p]]]!=='out';
+    case 'carpet':return L.kind[L.room[pos[cl.p]]]==='carpet';
+    case 'same':return L.room[pos[cl.p]]===L.room[pos[cl.q]];
+    case 'diff':return L.room[pos[cl.p]]!==L.room[pos[cl.q]];
+    case 'north':return RC(n,pos[cl.p])[0]<RC(n,pos[cl.q])[0];
+    case 'west':return RC(n,pos[cl.p])[1]<RC(n,pos[cl.q])[1];
+    case 'diag':{const a=RC(n,pos[cl.p]),b=RC(n,pos[cl.q]);return Math.abs(a[0]-b[0])===1&&Math.abs(a[1]-b[1])===1;}
+    case 'alone':return pos.every((c,i)=>i===cl.p||L.room[c]!==L.room[pos[cl.p]]);
+    case 'empty':return pos.every(c=>L.room[c]!==cl.room);
+    case 'count':return pos.filter(c=>L.room[c]===cl.room).length===cl.k;
+  }
+  return false;
+}
+function murderOK(L,pos){const n=pos.length,vr=L.room[pos[n-1]];return pos.slice(0,n-1).filter(c=>L.room[c]===vr).length===1;}
+function murdererOf(L,pos){const n=pos.length,vr=L.room[pos[n-1]];return pos.slice(0,n-1).findIndex(c=>L.room[c]===vr);}
+/* counts solutions up to limit (or -1 if it gives up after budget steps) */
+function solve(L,clues,limit=2,out,budget=Infinity){
+  const n=L.n,N=n,M=n*n,cells=[];for(let c=0;c<M;c++)if(!BLOCK.has(L.obj[c]))cells.push(c);
+  const un=[...Array(N)].map(()=>[]),pr=[...Array(N)].map(()=>[]),glob=[];
+  const fake=new Array(N).fill(0);
+  for(const cl of clues){
+    if(UNARY.has(cl.t))un[cl.p].push(cl);
+    else if(PAIR.has(cl.t)){
+      let rel=cl._rel;
+      if(!rel||cl._L!==L){rel=new Uint8Array(M*M);const f=[];for(const a of cells)for(const b of cells){f[cl.p]=a;f[cl.q]=b;rel[a*M+b]=truth(L,f,cl)?1:0;}
+        Object.defineProperty(cl,'_rel',{value:rel,writable:true,configurable:true});Object.defineProperty(cl,'_L',{value:L,writable:true,configurable:true});}
+      pr[cl.p].push({o:cl.q,rel,fw:true});pr[cl.q].push({o:cl.p,rel,fw:false});
+    }
+    else if(cl.t==='empty'){for(let p=0;p<N;p++)un[p].push({t:'notin',p,room:cl.room});}
+    else glob.push(cl);
+  }
+  const dom=[...Array(N)].map((_,p)=>cells.filter(c=>{fake[p]=c;return un[p].every(cl=>truth(L,fake,cl));}));
+  if(dom.some(d=>!d.length))return 0;
+  const pos=new Int16Array(N).fill(-1),rowU=new Uint8Array(n),colU=new Uint8Array(n),countIn=new Int16Array(L.K);
+  const rowOf=new Int16Array(M),colOf=new Int16Array(M);for(let c=0;c<M;c++){rowOf[c]=Math.floor(c/n);colOf[c]=c%n;}
+  const cnt=glob.filter(g=>g.t==='count'),alone=glob.filter(g=>g.t==='alone');
+  let found=0,nodes=0;const buf=[...Array(N)].map(()=>new Int16Array(M));
+  const rec=depth=>{
+    if(++nodes>budget){found=-1;return true;}
+    if(depth===N){
+      if(!murderOK(L,Array.from(pos)))return false;
+      const P=Array.from(pos);for(const cl of glob)if(!truth(L,P,cl))return false;
+      found++;if(out&&found===1)out.push(P);return found>=limit;
+    }
+    let best=-1,bestN=1e9;const b=buf[depth];
+    for(let p=0;p<N;p++){if(pos[p]>=0)continue;
+      const ps=pr[p];let k=0;
+      for(const c of dom[p]){if(rowU[rowOf[c]]||colU[colOf[c]])continue;let ok=true;
+        for(let j=0;j<ps.length;j++){const e=ps[j],oc=pos[e.o];if(oc<0)continue;if(!(e.fw?e.rel[c*M+oc]:e.rel[oc*M+c])){ok=false;break;}}
+        if(ok)k++;}
+      if(!k)return false;if(k<bestN){bestN=k;best=p;if(k===1)break;}}
+    let k=0;const ps=pr[best];
+    for(const c of dom[best]){if(rowU[rowOf[c]]||colU[colOf[c]])continue;let ok=true;
+      for(let j=0;j<ps.length;j++){const e=ps[j],oc=pos[e.o];if(oc<0)continue;if(!(e.fw?e.rel[c*M+oc]:e.rel[oc*M+c])){ok=false;break;}}
+      if(ok)b[k++]=c;}
+    for(let i=0;i<k;i++){const c=b[i],rm=L.room[c];
+      pos[best]=c;rowU[rowOf[c]]=1;colU[colOf[c]]=1;countIn[rm]++;
+      let ok=true;
+      for(const g of cnt)if(countIn[g.room]>g.k){ok=false;break;}
+      if(ok)for(const g of alone)if(pos[g.p]>=0&&countIn[L.room[pos[g.p]]]>1){ok=false;break;}
+      if(ok&&pos[N-1]>=0&&countIn[L.room[pos[N-1]]]>2)ok=false;
+      const stop=ok&&rec(depth+1);
+      pos[best]=-1;rowU[rowOf[c]]=0;colU[colOf[c]]=0;countIn[rm]--;
+      if(stop)return true;
+    }
+    return false;
+  };
+  rec(0);return found;
+}
+function cluePool(L,sol){
+  const n=L.n,N=n,pool=[];
+  for(let p=0;p<N;p++){
+    const c=sol[p];
+    pool.push({t:'in',p,room:L.room[c]});
+    for(let k=0;k<L.K;k++)if(k!==L.room[c])pool.push({t:'notin',p,room:k});
+    if(L.obj[c])pool.push({t:'on',p,o:L.obj[c]});
+    for(const o of adjObjs(L,c))pool.push({t:'by',p,o});
+    if(L.kind[L.room[c]]!=='out')pool.push({t:L.win[c]?'win':'nowin',p});
+    if(corner(n,c))pool.push({t:'corner',p});
+    const kd=L.kind[L.room[c]];pool.push({t:kd==='out'?'out':'inside',p});if(kd==='carpet')pool.push({t:'carpet',p});
+    const cl={t:'alone',p};if(truth(L,sol,cl))pool.push(cl);
+    for(let q=0;q<N;q++){if(q===p)continue;
+      if(q>p){pool.push({t:L.room[c]===L.room[sol[q]]?'same':'diff',p,q});const d={t:'diag',p,q};if(truth(L,sol,d))pool.push(d);}
+      if(truth(L,sol,{t:'north',p,q}))pool.push({t:'north',p,q});
+      if(truth(L,sol,{t:'west',p,q}))pool.push({t:'west',p,q});
+    }
+  }
+  for(let k=0;k<L.K;k++){const m=sol.filter(c=>L.room[c]===k).length;if(m===0)pool.push({t:'empty',room:k});else if(m>=2)pool.push({t:'count',room:k,k:m});}
+  return pool;
+}
+const BUD=40000;
+function generate(seed,diff){
+  const r=rng(seed),D=DIFFS[diff];
+  for(let t=0;t<60;t++){
+    const L=layout(r,diff);if(!L)continue;
+    const sol=placeSolution(r,L);if(!sol)continue;
+    const pool=cluePool(L,sol).map(cl=>({cl,key:-Math.log(r()+1e-12)/(D.w[cl.t]||1)})).sort((a,b)=>a.key-b.key).map(x=>x.cl);
+    const chosen=[];let u=0;
+    for(const cl of pool){chosen.push(cl);if(chosen.length>=L.n&&(u=solve(L,chosen,2,null,BUD))===1)break;}
+    if(u!==1)continue;
+    // drop clues that aren't needed, last-chosen first is too predictable, so go in a random order
+    for(const cl of shuffle(r,chosen.slice())){const i=chosen.indexOf(cl);chosen.splice(i,1);if(solve(L,chosen,2,null,BUD)!==1)chosen.splice(i,0,cl);}
+    return Object.assign(L,{diff,seed,sol,clues:JSON.parse(JSON.stringify(chosen)),murderer:murdererOf(L,sol)});
+  }
+  return null;
+}
+return {IN_BLOCK,IN_STAND,OUT_BLOCK,OUT_STAND,rng,shuffle,generate,solve,truth,murderOK,murdererOf,BLOCK,DIFFS,corner,adjObjs,RC};
+}
+const ENGINE=ENGINE_FACTORY();
+/*ENDENGINE*/
+
+/* ---------- art: 36 hand-drawn suspects, the furniture, and the floor plan ---------- */
+const INK='#2A1F1A';
+const SK=`stroke="${INK}" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"`;
+const BODY_COLS=['#FF9A76','#7EC8F2','#9BDB7A','#F7C948','#C9A0F0','#FF8FB4','#5FD3C4','#F4A259','#A3B4FF','#E8E07A','#FFB3A7','#86E0A8'];
+const SHAPES=[
+  'M0 -22 C20 -22 32 -8 32 10 C32 30 18 42 0 42 C-18 42 -32 30 -32 10 C-32 -8 -20 -22 0 -22Z', // round
+  'M0 -26 C17 -26 26 -12 27 6 C28 28 17 43 0 43 C-17 43 -28 28 -27 6 C-26 -12 -17 -26 0 -26Z', // bean
+  'M-22 -21 C-8 -24 8 -24 22 -21 C30 -19 31 -10 31 2 L31 28 C31 38 24 42 14 42 L-14 42 C-24 42 -31 38 -31 28 L-31 2 C-31 -10 -30 -19 -22 -21Z', // toast
+  'M0 -22 C12 -22 18 -12 20 -2 C30 6 34 18 32 28 C30 38 18 43 0 43 C-18 43 -30 38 -32 28 C-34 18 -30 6 -20 -2 C-18 -12 -12 -22 0 -22Z' // pear
+];
+/* each accessory: [behind-the-body svg, in-front svg]; drawn around a head whose top is near y=-22 */
+const ACC={
+tophat:['',`<rect x="-15" y="-54" width="30" height="31" rx="3" fill="#3A2E3F" ${SK}/><rect x="-15" y="-34" width="30" height="6" fill="#E0483F"/><rect x="-25" y="-27" width="50" height="7" rx="3.5" fill="#3A2E3F" ${SK}/>`],
+bowler:['',`<path d="M-19 -21 C-20 -44 20 -44 19 -21Z" fill="#6B5240" ${SK}/><path d="M-27 -21 Q0 -14 27 -21" fill="none" ${SK} stroke-width="5"/>`],
+chef:['',`<circle cx="-12" cy="-40" r="11" fill="#fff" ${SK}/><circle cx="12" cy="-40" r="11" fill="#fff" ${SK}/><circle cx="0" cy="-47" r="12" fill="#fff" ${SK}/><rect x="-15" y="-37" width="30" height="16" rx="3" fill="#fff" ${SK}/>`],
+nurse:['',`<path d="M-18 -19 L-14 -37 H14 L18 -19Z" fill="#fff" ${SK}/><path d="M-3 -34 h6 v4 h4 v6 h-4 v4 h-6 v-4 h-4 v-6 h4z" fill="#E0483F"/>`],
+mortar:['',`<rect x="-13" y="-31" width="26" height="11" fill="#3A2E3F" ${SK}/><path d="M-31 -34 L0 -44 L31 -34 L0 -25Z" fill="#3A2E3F" ${SK}/><path d="M22 -36 V-20" stroke="#FFD23F" stroke-width="3"/><circle cx="22" cy="-18" r="3.5" fill="#FFD23F"/>`],
+beret:['',`<path d="M-26 -20 C-28 -36 -6 -40 10 -36 C26 -33 32 -24 24 -18 C10 -14 -14 -14 -26 -20Z" fill="#E0483F" ${SK}/><path d="M4 -37 l2 -6" ${SK}/>`],
+crown:['',`<path d="M-18 -19 L-21 -43 L-9 -32 L0 -48 L9 -32 L21 -43 L18 -19Z" fill="#FFD23F" ${SK}/><circle cx="0" cy="-26" r="3.5" fill="#E0483F"/><circle cx="-11" cy="-25" r="2.5" fill="#5FB3F2"/><circle cx="11" cy="-25" r="2.5" fill="#5FB3F2"/>`],
+tiara:['',`<path d="M-20 -19 Q0 -34 20 -19" fill="none" stroke="#C9C9D9" stroke-width="5" stroke-linecap="round"/><path d="M-7 -26 L0 -38 L7 -26" fill="#E6E6F2" ${SK}/><circle cx="0" cy="-30" r="3" fill="#FF8FB4"/>`],
+flatcap:['',`<path d="M-27 -15 C-28 -34 -4 -38 12 -34 C24 -31 30 -24 36 -16 C20 -13 -10 -12 -27 -15Z" fill="#9C7A54" ${SK}/><path d="M-6 -36 Q0 -26 -2 -15" fill="none" ${SK} stroke-width="2.2"/>`],
+cowboy:['',`<path d="M-17 -22 C-20 -46 -6 -44 0 -39 C6 -44 20 -46 17 -22Z" fill="#C98B4E" ${SK}/><path d="M-38 -26 Q-30 -14 0 -15 Q30 -14 38 -26 Q26 -20 0 -21 Q-26 -20 -38 -26Z" fill="#C98B4E" ${SK}/><rect x="-16" y="-28" width="32" height="5" fill="#7A4E2A"/>`],
+wizard:['',`<path d="M-25 -19 L6 -68 L25 -19Z" fill="#7A5CD6" ${SK}/><path d="M-4 -40 l2 -5 l2 5 l5 1 l-4 3 l1 5 l-4 -3 l-4 3 l1 -5 l-4 -3z" fill="#FFD23F"/><path d="M-28 -20 Q0 -12 28 -20" fill="none" ${SK} stroke-width="5"/>`],
+bow:['',`<path d="M3 -25 L-14 -38 L-15 -14Z" fill="#FF6FA0" ${SK}/><path d="M3 -25 L20 -38 L21 -14Z" fill="#FF6FA0" ${SK}/><circle cx="3" cy="-25" r="5.5" fill="#FF6FA0" ${SK}/>`],
+flower:['',`<g transform="translate(18 -20)">${[0,72,144,216,288].map(a=>`<ellipse cx="0" cy="-9" rx="6" ry="8.5" fill="#fff" ${SK} stroke-width="2.4" transform="rotate(${a})"/>`).join('')}<circle r="5.5" fill="#FFD23F" ${SK} stroke-width="2.4"/></g>`],
+phones:['',`<path d="M-30 4 C-32 -38 32 -38 30 4" fill="none" stroke="${INK}" stroke-width="6"/><path d="M-30 4 C-32 -38 32 -38 30 4" fill="none" stroke="#E0483F" stroke-width="3"/><rect x="-38" y="-6" width="12" height="20" rx="5" fill="#3A2E3F" ${SK}/><rect x="26" y="-6" width="12" height="20" rx="5" fill="#3A2E3F" ${SK}/>`],
+beanie:['',`<circle cx="0" cy="-45" r="7" fill="#fff" ${SK}/><path d="M-25 -14 C-27 -46 27 -46 25 -14Z" fill="#3FB8A8" ${SK}/><rect x="-27" y="-21" width="54" height="9" rx="4" fill="#2E8F83" ${SK}/>`],
+pirate:['',`<path d="M-34 -20 C-26 -48 26 -48 34 -20 C14 -27 -14 -27 -34 -20Z" fill="#3A2E3F" ${SK}/><circle cx="0" cy="-33" r="4.5" fill="#fff"/><path d="M-4 -26 l8 -4 M-4 -30 l8 4" stroke="#fff" stroke-width="2"/>`],
+viking:['',`<path d="M-22 -24 C-36 -28 -38 -44 -32 -52 C-30 -40 -24 -36 -16 -34Z" fill="#FFF3D6" ${SK}/><path d="M22 -24 C36 -28 38 -44 32 -52 C30 -40 24 -36 16 -34Z" fill="#FFF3D6" ${SK}/><path d="M-22 -16 C-24 -44 24 -44 22 -16Z" fill="#AEB8C4" ${SK}/><circle cx="-10" cy="-28" r="2" fill="${INK}"/><circle cx="10" cy="-28" r="2" fill="${INK}"/>`],
+party:['',`<path d="M-15 -19 L0 -58 L15 -19Z" fill="#5FB3F2" ${SK}/><path d="M-9 -34 L9 -34 M-5 -45 L5 -45" stroke="#FFD23F" stroke-width="4"/><circle cx="0" cy="-60" r="5" fill="#FF6FA0" ${SK}/>`],
+sailor:['',`<path d="M-22 -20 C-24 -40 24 -40 22 -20Z" fill="#fff" ${SK}/><rect x="-23" y="-25" width="46" height="7" rx="3" fill="#2F4C8C" ${SK}/><circle cx="0" cy="-33" r="3" fill="#E0483F"/>`],
+fez:['',`<path d="M-13 -19 L-10 -43 H10 L13 -19Z" fill="#D63C3C" ${SK}/><path d="M0 -43 Q10 -42 12 -28" fill="none" stroke="${INK}" stroke-width="2.5"/><circle cx="12" cy="-26" r="3" fill="${INK}"/>`],
+hardhat:['',`<path d="M-24 -18 C-24 -46 24 -46 24 -18Z" fill="#FFC531" ${SK}/><path d="M-32 -18 H32" ${SK} stroke-width="6"/><path d="M0 -42 V-24" ${SK} stroke-width="5" stroke="#E8A800"/>`],
+bun:['',`<circle cx="0" cy="-34" r="12" fill="#6B4A2E" ${SK}/><path d="M-26 -8 C-26 -28 26 -28 26 -8 C14 -18 -14 -18 -26 -8Z" fill="#6B4A2E" ${SK}/><path d="M-10 -36 q10 -6 20 0" fill="none" stroke="#9C7050" stroke-width="2.5"/>`],
+pigtails:[`<circle cx="-33" cy="-8" r="11" fill="#E8A33C" ${SK}/><circle cx="33" cy="-8" r="11" fill="#E8A33C" ${SK}/>`,`<path d="M-27 -6 C-30 -30 30 -30 27 -6 C18 -16 6 -18 0 -14 C-6 -18 -18 -16 -27 -6Z" fill="#E8A33C" ${SK}/><circle cx="-26" cy="-12" r="3.5" fill="#FF6FA0"/><circle cx="26" cy="-12" r="3.5" fill="#FF6FA0"/>`],
+mohawk:['',`<path d="M-12 -16 L-14 -36 L-6 -28 L-4 -46 L2 -30 L6 -48 L9 -30 L15 -40 L13 -16Z" fill="#FF4FA3" ${SK}/>`],
+curly:['',`${[-22,-11,0,11,22].map((x,i)=>`<circle cx="${x}" cy="${-22-(i%2?6:2)}" r="10" fill="#4A3426" ${SK}/>`).join('')}`],
+cat:['',`<path d="M-26 -10 L-24 -40 L-6 -22Z" fill="#3A2E3F" ${SK}/><path d="M26 -10 L24 -40 L6 -22Z" fill="#3A2E3F" ${SK}/><path d="M-21 -17 L-21 -32 L-11 -22Z M21 -17 L21 -32 L11 -22Z" fill="#FF8FB4"/>`],
+bunny:[`<ellipse cx="-12" cy="-44" rx="8" ry="22" fill="#fff" ${SK} transform="rotate(-10 -12 -44)"/><ellipse cx="12" cy="-44" rx="8" ry="22" fill="#fff" ${SK} transform="rotate(10 12 -44)"/><ellipse cx="-12" cy="-44" rx="3.5" ry="14" fill="#FFB3C8" transform="rotate(-10 -12 -44)"/><ellipse cx="12" cy="-44" rx="3.5" ry="14" fill="#FFB3C8" transform="rotate(10 12 -44)"/>`,''],
+antenna:['',`<path d="M-8 -20 Q-14 -36 -18 -44 M8 -20 Q14 -36 18 -44" fill="none" ${SK}/><circle cx="-18" cy="-46" r="5.5" fill="#FFD23F" ${SK}/><circle cx="18" cy="-46" r="5.5" fill="#FFD23F" ${SK}/>`],
+propeller:['',`<path d="M-22 -18 C-24 -40 24 -40 22 -18Z" fill="#5FB3F2" ${SK}/><path d="M-4 -18 C-6 -40 6 -40 4 -18Z" fill="#E0483F"/><path d="M0 -37 V-44" ${SK}/><path d="M-18 -46 Q0 -40 0 -45 Q0 -40 18 -46 Q4 -50 0 -45 Q-4 -50 -18 -46Z" fill="#FFD23F" ${SK} stroke-width="2.4"/>`],
+bandana:['',`<path d="M-30 -6 C-26 -22 26 -22 30 -6 C14 -12 -14 -12 -30 -6Z" fill="#E0483F" ${SK}/><path d="M28 -10 l10 -6 l-2 10 l6 6 l-12 -2Z" fill="#E0483F" ${SK}/><circle cx="-8" cy="-14" r="1.8" fill="#fff"/><circle cx="6" cy="-15" r="1.8" fill="#fff"/>`],
+sunhat:['',`<ellipse cx="0" cy="-20" rx="40" ry="10" fill="#F2D27A" ${SK}/><path d="M-18 -22 C-18 -42 18 -42 18 -22Z" fill="#F2D27A" ${SK}/><path d="M-18 -24 Q0 -20 18 -24" stroke="#5FD3C4" stroke-width="5" fill="none"/>`],
+fascinator:['',`<path d="M14 -24 C24 -52 40 -54 36 -38 C34 -30 24 -26 14 -24Z" fill="#9B6BE0" ${SK}/><path d="M16 -26 C26 -36 30 -44 34 -48" fill="none" stroke="#fff" stroke-width="2"/><circle cx="12" cy="-22" r="7" fill="#3A2E3F" ${SK}/>`],
+monocle:['',`<path d="M-16 24 C-10 18 -4 22 0 20 C4 22 10 18 16 24 C10 22 4 26 0 24 C-4 26 -10 22 -16 24Z" fill="#5A3E2A" ${SK} stroke-width="2.4"/><circle cx="12" cy="6" r="9" fill="rgba(255,255,255,.35)" ${SK} stroke-width="2.6"/><path d="M20 10 Q24 24 20 34" fill="none" stroke="#C59A12" stroke-width="2"/>`],
+beard:['',`<path d="M-24 18 C-22 40 -10 48 0 48 C10 48 22 40 24 18 C16 30 -16 30 -24 18Z" fill="#8A5A3A" ${SK}/><circle cx="-11" cy="6" r="8" fill="none" ${SK}/><circle cx="11" cy="6" r="8" fill="none" ${SK}/><path d="M-3 6 H3" ${SK}/>`],
+patch:['',`<path d="M-30 -6 L28 -14" ${SK} stroke-width="2.5"/><ellipse cx="-11" cy="6" rx="8.5" ry="7.5" fill="#3A2E3F" ${SK} stroke-width="2.4"/>`],
+bowtie:['',`<path d="M0 36 L-14 28 L-14 44Z M0 36 L14 28 L14 44Z" fill="#E0483F" ${SK} stroke-width="2.6"/><circle cx="0" cy="36" r="3.5" fill="#E0483F" ${SK} stroke-width="2.4"/><path d="M-18 -4 L-5 -1 M18 -4 L5 -1" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>`],
+};
+const ACC_KEYS=Object.keys(ACC); // 36
+const CHARS=ACC_KEYS.map((k,i)=>({acc:k,col:BODY_COLS[(i*5+Math.floor(i/12))%12],shape:(i*3+Math.floor(i/9))%4,face:i%4}));
+/* faces: dots, happy, sleepy, big eyes; the patch/monocle/beard ones draw their own around the eyes */
+function faceSVG(f,mood){
+  const ey=6;let eyes,mouth;
+  if(mood==='dead'){eyes=`<path d="M-15 ${ey-4} l8 8 M-7 ${ey-4} l-8 8 M7 ${ey-4} l8 8 M15 ${ey-4} l-8 8" ${SK} stroke-width="2.8"/>`;mouth=`<path d="M-6 24 q6 -4 12 0" fill="none" ${SK} stroke-width="2.6"/>`;return eyes+mouth;}
+  if(f===0)eyes=`<circle cx="-11" cy="${ey}" r="4.6" fill="${INK}"/><circle cx="11" cy="${ey}" r="4.6" fill="${INK}"/><circle cx="-9.5" cy="${ey-1.8}" r="1.5" fill="#fff"/><circle cx="12.5" cy="${ey-1.8}" r="1.5" fill="#fff"/>`;
+  else if(f===1)eyes=`<path d="M-16 ${ey+2} q5 -7 10 0 M6 ${ey+2} q5 -7 10 0" fill="none" ${SK} stroke-width="3"/>`;
+  else if(f===2)eyes=`<path d="M-16 ${ey} q5 4 10 0 M6 ${ey} q5 4 10 0" fill="none" ${SK} stroke-width="3"/>`;
+  else eyes=`<circle cx="-11" cy="${ey}" r="7" fill="#fff" ${SK} stroke-width="2.4"/><circle cx="11" cy="${ey}" r="7" fill="#fff" ${SK} stroke-width="2.4"/><circle class="look" cx="-10" cy="${ey+1}" r="3.4" fill="${INK}"/><circle class="look" cx="12" cy="${ey+1}" r="3.4" fill="${INK}"/>`;
+  mouth=mood==='worried'?`<path d="M-6 25 q6 -5 12 0" fill="none" ${SK} stroke-width="2.6"/>`:mood==='smug'?`<path d="M-6 21 q8 4 12 -2" fill="none" ${SK} stroke-width="2.6"/>`:mood==='shock'?`<ellipse cx="0" cy="23" rx="4" ry="5" fill="${INK}"/>`:`<path d="M-7 20 q7 7 14 0" fill="none" ${SK} stroke-width="2.6"/>`;
+  return `<ellipse cx="-19" cy="17" rx="5.5" ry="3.3" fill="#FF8FA3" opacity=".75"/><ellipse cx="19" cy="17" rx="5.5" ry="3.3" fill="#FF8FA3" opacity=".75"/>${eyes}${mouth}`;
+}
+/* one suspect, in a -50..50 box */
+function charG(ci,o={}){
+  const C=CHARS[ci%CHARS.length],A=ACC[C.acc],sh=SHAPES[C.shape];
+  if(o.chalk)return `<g filter="url(#wob)"><path d="${sh}" fill="rgba(42,31,26,.78)" stroke="#F7F4EA" stroke-width="3.5" stroke-dasharray="7 5"/><path d="M-15 2 l8 8 M-7 2 l-8 8 M7 2 l8 8 M15 2 l-8 8" stroke="#F7F4EA" stroke-width="3" stroke-linecap="round"/></g>`;
+  const col=o.ghost?'#D8D2C6':C.col;
+  return `<g filter="url(#wob)">${A[0]}<path d="${sh}" transform="translate(3 4)" fill="rgba(0,0,0,.22)"/><path d="${sh}" fill="${col}" ${SK}/><path d="M-18 -8 q4 -8 12 -9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55"/>${faceSVG(C.face,o.mood)}${A[1]}</g>`;
+}
+function charSVG(ci,o={}){return `<svg viewBox="-50 -62 100 112" class="${o.cls||''}" aria-hidden="true">${charG(ci,o)}</svg>`;}
+
+/* furniture, drawn in a 0..100 cell */
+const OBJ_NAMES={chair:'chair',sofa:'sofa',bed:'bed',rug:'rug',table:'table',plant:'potted plant',shelf:'bookcase',piano:'piano',clock:'grandfather clock',tree:'tree',pond:'pond',statue:'statue',bench:'bench',flowers:'flower bed'};
+const OBJ_SHORT={chair:'Chair',sofa:'Sofa',bed:'Bed',rug:'Rug',table:'Table',plant:'Plant',shelf:'Bookcase',piano:'Piano',clock:'Clock',tree:'Tree',pond:'Pond',statue:'Statue',bench:'Bench',flowers:'Flowers'};
+function objG(o){
+  switch(o){
+  case 'chair':return `<path d="M32 18 H52 V52" fill="none" ${SK} stroke-width="5" stroke="#8A5A3A"/><rect x="30" y="16" width="22" height="38" rx="5" fill="#C98B4E" ${SK}/><rect x="30" y="50" width="42" height="12" rx="4" fill="#E0A869" ${SK}/><path d="M34 62 V84 M68 62 V84" ${SK} stroke-width="4.5"/>`;
+  case 'sofa':return `<rect x="16" y="30" width="68" height="34" rx="12" fill="#5FB3A8" ${SK}/><rect x="10" y="44" width="16" height="30" rx="7" fill="#7CCFC3" ${SK}/><rect x="74" y="44" width="16" height="30" rx="7" fill="#7CCFC3" ${SK}/><rect x="24" y="52" width="52" height="20" rx="6" fill="#7CCFC3" ${SK}/><path d="M50 54 V72" ${SK} stroke-width="2.4"/>`;
+  case 'bed':return `<rect x="18" y="12" width="64" height="76" rx="9" fill="#fff" ${SK}/><rect x="26" y="18" width="48" height="16" rx="7" fill="#F2F2F8" ${SK}/><path d="M18 42 H82 V80 Q82 88 74 88 H26 Q18 88 18 80Z" fill="#A3B4FF" ${SK}/><path d="M24 56 H76 M24 70 H76" stroke="#fff" stroke-width="3" opacity=".6"/>`;
+  case 'rug':return `<rect x="9" y="17" width="82" height="66" rx="14" fill="#E57A5A" ${SK}/><rect x="19" y="27" width="62" height="46" rx="9" fill="none" stroke="#FFD9A8" stroke-width="4" stroke-dasharray="7 5"/><path d="M50 38 L62 50 L50 62 L38 50Z" fill="#FFD9A8"/><path d="M9 26 h-6 M9 38 h-6 M9 50 h-6 M9 62 h-6 M9 74 h-6 M91 26 h6 M91 38 h6 M91 50 h6 M91 62 h6 M91 74 h6" ${SK} stroke-width="2.2"/>`;
+  case 'table':return `<ellipse cx="50" cy="44" rx="38" ry="18" fill="#B57A45" ${SK}/><path d="M24 54 V82 M76 54 V82 M50 62 V88" ${SK} stroke-width="5"/><ellipse cx="50" cy="42" rx="13" ry="5" fill="#fff" ${SK} stroke-width="2.4"/><path d="M64 34 q4 -10 10 -6 q-2 6 -10 6" fill="#FF6FA0" ${SK} stroke-width="2"/>`;
+  case 'plant':return `<path d="M50 60 C34 50 22 34 28 18 C40 24 48 40 50 58 C52 34 60 14 74 10 C78 30 64 48 50 60Z" fill="#5CC98A" ${SK}/><path d="M50 60 C40 44 20 46 14 40 C22 56 38 62 50 62" fill="#3FA86C" ${SK}/><path d="M32 58 H68 L63 88 H37Z" fill="#D9774A" ${SK}/><path d="M30 58 H70" ${SK} stroke-width="5"/>`;
+  case 'shelf':return `<rect x="16" y="8" width="68" height="84" rx="4" fill="#8A5A3A" ${SK}/><path d="M16 36 H84 M16 64 H84" ${SK}/>${[[22,'#E0483F'],[31,'#5FB3F2'],[40,'#FFD23F'],[49,'#9BDB7A']].map(([x,c])=>`<rect x="${x}" y="14" width="8" height="21" fill="${c}" ${SK} stroke-width="2"/>`).join('')}${[[22,'#C9A0F0'],[31,'#FF9A76'],[40,'#5FD3C4'],[58,'#FFD23F']].map(([x,c])=>`<rect x="${x}" y="42" width="8" height="21" fill="${c}" ${SK} stroke-width="2"/>`).join('')}<rect x="26" y="70" width="40" height="18" rx="2" fill="#F3E2B6" ${SK} stroke-width="2"/>`;
+  case 'piano':return `<rect x="12" y="14" width="76" height="58" rx="6" fill="#3A2E3F" ${SK}/><rect x="16" y="50" width="68" height="16" fill="#fff" ${SK} stroke-width="2.4"/>${[24,34,44,54,64,74].map(x=>`<rect x="${x-3}" y="50" width="6" height="9" fill="${INK}"/>`).join('')}<path d="M18 72 V88 M82 72 V88" ${SK} stroke-width="5"/><path d="M40 26 q4 -6 6 0 v10" fill="none" stroke="#FFD23F" stroke-width="3"/>`;
+  case 'clock':return `<rect x="30" y="6" width="40" height="88" rx="8" fill="#9C6B3E" ${SK}/><circle cx="50" cy="30" r="15" fill="#FFF7E3" ${SK}/><path d="M50 30 V20 M50 30 L57 34" ${SK} stroke-width="2.6"/><rect x="40" y="52" width="20" height="32" rx="4" fill="#6B4A2E" ${SK} stroke-width="2.4"/><circle cx="50" cy="76" r="5" fill="#FFD23F" ${SK} stroke-width="2"/>`;
+  case 'tree':return `<rect x="43" y="56" width="14" height="34" rx="3" fill="#8A5A3A" ${SK}/><circle cx="50" cy="38" r="28" fill="#4FB872" ${SK}/><circle cx="32" cy="50" r="14" fill="#4FB872" ${SK}/><circle cx="68" cy="50" r="14" fill="#4FB872" ${SK}/><circle cx="40" cy="30" r="4" fill="#FF6F6F"/><circle cx="62" cy="40" r="4" fill="#FF6F6F"/><circle cx="52" cy="22" r="4" fill="#FF6F6F"/>`;
+  case 'pond':return `<path d="M14 52 C12 30 36 20 56 24 C80 26 90 42 86 58 C82 76 58 82 40 78 C22 76 14 68 14 52Z" fill="#6EC6F0" ${SK}/><path d="M28 48 q8 -4 16 0 M54 62 q8 -4 16 0" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path d="M58 40 a9 7 0 1 0 2 -6 l-6 5z" fill="#5CC98A" ${SK} stroke-width="2"/>`;
+  case 'statue':return `<rect x="26" y="70" width="48" height="20" rx="3" fill="#C4C0B8" ${SK}/><circle cx="50" cy="24" r="12" fill="#E4E0D8" ${SK}/><path d="M36 70 C36 50 40 38 50 38 C60 38 64 50 64 70Z" fill="#E4E0D8" ${SK}/><path d="M64 46 L74 32" ${SK} stroke-width="5"/>`;
+  case 'bench':return `<rect x="10" y="30" width="80" height="12" rx="4" fill="#C98B4E" ${SK}/><rect x="10" y="50" width="80" height="12" rx="4" fill="#E0A869" ${SK}/><path d="M18 62 V82 M82 62 V82 M18 42 V50 M82 42 V50" ${SK} stroke-width="5"/>`;
+  case 'flowers':return `<path d="M14 80 C14 62 86 62 86 80Z" fill="#8A5A3A" ${SK}/>${[[26,46,'#FF6FA0'],[50,36,'#FFD23F'],[74,46,'#C9A0F0'],[38,58,'#FF9A76'],[62,58,'#7EC8F2']].map(([x,y,c])=>`<path d="M${x} ${y+6} V72" stroke="#3FA86C" stroke-width="3"/><circle cx="${x}" cy="${y}" r="8" fill="${c}" ${SK} stroke-width="2.4"/><circle cx="${x}" cy="${y}" r="2.5" fill="#fff"/>`).join('')}`;
+  }
+  return '';
+}
+function objSVG(o,cls=''){return `<svg viewBox="0 0 100 100" class="${cls}" aria-hidden="true"><g filter="url(#wob)">${objG(o)}</g></svg>`;}
+const ROOM_TINTS=['#F6D9C4','#D2E6D0','#D6DEF4','#F4E4A8','#EAD3E8','#CFE8EE','#F2D0CF','#E2DDCB','#DCEBC0','#F5DDB6','#D8D3F0','#C9E4DA'];
+const CARPET_TINTS=['#C96F6F','#6F8FC9','#9C6FC9','#C99A4E','#5FA39A','#B56A9C'];
+
+/* ---------- small helpers ---------- */
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const app=document.getElementById('app');
+let timers=[],cleanup=[];
+function later(fn,ms){timers.push(setTimeout(fn,RM?Math.min(ms,60):ms));}
+function show(html){document.querySelectorAll('.lb,.bigstamp,.confetti').forEach(m=>m.remove());timers.forEach(clearTimeout);timers=[];cleanup.forEach(f=>{try{f();}catch(e){}});cleanup=[];app.innerHTML=html;window.scrollTo(0,0);}
+const on=(sel,ev,fn)=>{const el=typeof sel==='string'?app.querySelector(sel):sel;if(el)el.addEventListener(ev,fn);return el;};
+const $=s=>app.querySelector(s);
+const store={get(k,d){try{const v=localStorage.getItem('mdk:'+k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{if(v==null)localStorage.removeItem('mdk:'+k);else localStorage.setItem('mdk:'+k,JSON.stringify(v));}catch(e){}}};
+function toast(text){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='file toast pop';t.textContent=text;document.body.appendChild(t);setTimeout(()=>t.remove(),3200);}
+const fmt=ms=>{const s=Math.max(0,Math.floor(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
+const WORDS=['zero','one','two','three','four','five','six','seven','eight','nine'];
+function confetti(){if(RM)return;const box=document.createElement('div');box.className='confetti';const cs=['#FFD23F','#E0483F','#7EC8F2','#9BDB7A','#FF8FB4','#F3E2B6'];
+  box.innerHTML=Array.from({length:70},()=>`<i style="left:${Math.random()*100}%;background:${cs[Math.floor(Math.random()*cs.length)]};animation-duration:${1.6+Math.random()*1.8}s;animation-delay:${Math.random()*.5}s;transform:rotate(${Math.random()*360}deg)"></i>`).join('');
+  document.body.appendChild(box);setTimeout(()=>box.remove(),4200);}
+function bigStamp(text,cls=''){const s=document.createElement('div');s.className='bigstamp '+cls;s.innerHTML=text;document.body.appendChild(s);setTimeout(()=>s.remove(),1700);}
+const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms);}catch(e){}};
+
+/* ---------- fresh names, rooms and a little story for every case ---------- */
+const FIRST=['Pippa','Otto','Mabel','Rufus','Ines','Kofi','Wren','Basil','Tilly','Juniper','Felix','Hattie','Dev','Nell','Rosa','Arlo','Esme','Hugo','Priya','Cosmo','Delphine','Gus','Ivy','Jasper','Kit','Lulu','Mo','Noor','Ozzie','Poppy','Quentin','Rafi','Sunny','Tamsin','Uma','Vivi','Wally','Xander','Yara','Zeke','Bea','Clem','Dora','Elio','Fern','Gwen','Hal','Isla','Jojo','Kai','Lola','Milo','Nico','Opal','Percy','Ruby','Sol','Theo','Una','Winnie','Ziggy','Ada','Bram','Cass','Rocco','Mina','Ned','Saffi','Bertie','Marisol'];
+const SUR_A=['Mumble','Thistle','Puddle','Crumb','Fiddle','Bramble','Wobble','Pickle','Snoot','Butter','Gravy','Biscuit','Marble','Hobble','Kettle','Nettle','Toffee','Mopp','Quill','Fudge','Plink','Dribble','Waffle','Sprout','Grumble','Muddle','Pepper','Crumpet','Bumble','Gooseberry','Velvet','Fizz','Snuggle','Pudding','Tumble','Gobble'];
+const SUR_B=['wick','worth','bottom','ford','ington','by','shaw','field','ley','more','ton','well','combe','thorpe','stone','hurst','berry','pot','sworth','dale'];
+const TITLES=['Dr','Professor','Captain','Chef','Nurse','Lady','Lord','Sir','Madame','Major','Miss','Mr','Mrs','Mx','Reverend','Count','Dame','Auntie','Uncle','Judge','Admiral','Duchess','Baron'];
+const HOUSES=['Manor','Hall','House','Lodge','Grange','Towers','Villa','Cottage','Abbey','Castle'];
+const INDOOR=['Library','Kitchen','Study','Pantry','Music Room','Gallery','Bathroom','Bedroom','Nursery','Attic','Cellar','Parlour','Office','Laundry','Boot Room','Dining Room','Games Room','Sun Room','Chapel','Hallway','Larder','Wine Cellar','Map Room','Tea Room','Workshop','Den','Studio','Observatory','Trophy Room','Ballroom','Cloakroom','Billiards Room','Scullery','Sewing Room','Armoury','Snug'];
+const OUTDOOR=['Garden','Courtyard','Orchard','Terrace','Rose Garden','Veg Patch','Lawn','Yard','Patio','Maze','Duck Pond','Allotment'];
+const OCCASIONS=['at the birthday tea','during the thunderstorm','at the midsummer ball','on bonfire night','at the village quiz night','during the jam-tasting contest','at the reading of the will','on the night of the power cut','at the great cake judging','during the treasure hunt','at the masked dinner','on the first night of snow'];
+const WEAPONS=['a frozen kipper','a poisoned scone','a very heavy dictionary','a brass doorstop','a garden gnome','a croquet mallet','a rolling pin','a stuffed owl','a cricket bat','a marble bust','a cup of suspicious tea','a stale baguette','a bowling ball','a cast iron frying pan','an umbrella with a sharp tip','a jar of mystery jam'];
+function dress(P){
+  const r=ENGINE.rng((P.seed*2654435761)>>>0^0x5bd1e995),N=P.n,sh=a=>ENGINE.shuffle(r,a.slice()),pk=a=>a[Math.floor(r()*a.length)];
+  const firsts=sh(FIRST).slice(0,N),chars=sh([...Array(CHARS.length).keys()]).slice(0,N),surs=new Set();
+  P.people=firsts.map((f,i)=>{let s;do{s=pk(SUR_A)+pk(SUR_B);}while(surs.has(s));surs.add(s);
+    const t=r()<.6?pk(TITLES):'';return {first:f,full:(t?t+' ':'')+f+' '+s,ci:chars[i]};});
+  const ins=sh(INDOOR),outs=sh(OUTDOOR);let a=0,b=0;
+  P.roomNames=P.kind.map(k=>k==='out'?outs[b++]:ins[a++]);
+  P.house=pk(SUR_A)+pk(['by','ton','wick','ford','more'])+' '+pk(HOUSES);
+  P.occasion=pk(OCCASIONS);P.weapon=pk(WEAPONS);
+  return P;
+}
+/* the generator runs in a worker so the "dusting for prints" animation keeps moving on slow phones */
+let worker=null;
+function genCase(diff,seed){
+  return new Promise(res=>{
+    const done=P=>res(dress(P));
+    try{
+      if(!worker){worker=new Worker(URL.createObjectURL(new Blob([`const ENGINE=(${ENGINE_FACTORY.toString()})();onmessage=e=>postMessage({id:e.data.id,P:ENGINE.generate(e.data.seed,e.data.diff)});`],{type:'text/javascript'})));worker.cbs={};
+        worker.onmessage=e=>{const cb=worker.cbs[e.data.id];delete worker.cbs[e.data.id];cb&&cb(e.data.P);};
+        worker.onerror=()=>{const cbs=worker.cbs;worker=null;Object.values(cbs).forEach(f=>f(null));};}
+      const id=Math.random().toString(36).slice(2);
+      worker.cbs[id]=P=>P?done(P):setTimeout(()=>done(ENGINE.generate(seed,diff)),30);
+      worker.postMessage({id,seed,diff});
+    }catch(e){setTimeout(()=>done(ENGINE.generate(seed,diff)),30);}
+  });
+}
+const DIFF_INFO={easy:{name:'Rookie',sub:'Plenty of clues that point straight at people'},medium:{name:'Detective',sub:'A mix of where people were and who was near whom'},hard:{name:'Chief Inspector',sub:'Fewer direct clues, more who-was-north-of-whom'}};
+function hashSeed(s){let h=2166136261;for(const ch of String(s)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+
+/* ---------- clue text ---------- */
+function nm(P,p){const c=CHARS[P.people[p].ci].col;return `<b style="--hl:${c}99">${esc(P.people[p].first)}</b>`;}
+function rm(P,k){return `the ${esc(P.roomNames[k])}`;}
+function clueText(P,cl){
+  const a=cl.p!=null?nm(P,cl.p):'',b=cl.q!=null?nm(P,cl.q):'',on=OBJ_NAMES[cl.o];
+  switch(cl.t){
+    case 'in':return `${a} was in ${rm(P,cl.room)}.`;
+    case 'notin':return `${a} was not in ${rm(P,cl.room)}.`;
+    case 'on':return cl.o==='chair'?`${a} was sitting on a chair.`:cl.o==='sofa'?`${a} was lounging on a sofa.`:cl.o==='bed'?`${a} was lying on a bed.`:cl.o==='rug'?`${a} was standing on a rug.`:cl.o==='bench'?`${a} was sitting on a bench.`:`${a} was standing in a flower bed.`;
+    case 'by':return `${a} was right next to a ${on}.`;
+    case 'win':return `${a} was by a window.`;
+    case 'nowin':return `${a} was indoors, but not by a window.`;
+    case 'corner':return `${a} was in a corner of the map.`;
+    case 'out':return `${a} was outside.`;
+    case 'inside':return `${a} was somewhere inside the house.`;
+    case 'carpet':return `${a} was on a carpeted floor.`;
+    case 'same':return `${a} and ${b} were in the same room.`;
+    case 'diff':return `${a} and ${b} were in different rooms.`;
+    case 'north':return `${a} was somewhere north of ${b}.`;
+    case 'west':return `${a} was somewhere west of ${b}.`;
+    case 'diag':return `${a} was diagonally next to ${b}.`;
+    case 'alone':return `${a} was the only person in their room.`;
+    case 'empty':return `Nobody was in ${rm(P,cl.room)}.`;
+    case 'count':return `Exactly ${WORDS[cl.k]} people were in ${rm(P,cl.room)}.`;
+  }
+  return '';
+}
+const cluePeople=cl=>[cl.p,cl.q].filter(x=>x!=null);
+/* ---------- the floor plan ---------- */
+const CELL=100;
+function roomTint(P,k){const kd=P.kind[k];if(kd==='out')return '#B9DE9A';if(kd==='carpet')return CARPET_TINTS[k%CARPET_TINTS.length];return ROOM_TINTS[k%ROOM_TINTS.length];}
+function roomOrder(P){const seen=[];P.room.forEach(k=>{if(!seen.includes(k))seen.push(k);});return seen;} // rooms numbered in reading order
+function boardSVG(P,S,o={}){
+  const n=P.n,W=n*CELL,num={};roomOrder(P).forEach((k,i)=>num[k]=i+1);
+  const pos=o.pos||S.pos,occ=new Map();pos.forEach((c,p)=>{if(c>=0)occ.set(c,p);});
+  const rowsU=new Set(),colsU=new Set();pos.forEach(c=>{if(c>=0){rowsU.add(Math.floor(c/n));colsU.add(c%n);}});
+  const clash=new Set();pos.forEach((c,p)=>{if(c<0)return;pos.forEach((d,q)=>{if(q!==p&&d>=0&&(Math.floor(c/n)===Math.floor(d/n)||c%n===d%n)){clash.add(p);}});});
+  let s=`<svg id="board" viewBox="-14 -14 ${W+28} ${W+28}" role="img" aria-label="Floor plan, ${n} by ${n}">
+  <defs><pattern id="carpet" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="14" height="14" fill="none"/><path d="M0 0 V14" stroke="rgba(255,255,255,.22)" stroke-width="5"/></pattern>
+  <pattern id="grass" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M10 20 l3 -8 l3 8 M33 42 l3 -8 l3 8 M38 12 l2 -6 l2 6" fill="none" stroke="#6FAE55" stroke-width="2.5" stroke-linecap="round"/></pattern>
+  <pattern id="boards" width="100" height="25" patternUnits="userSpaceOnUse"><path d="M0 24.5 H100 M40 0 V25" stroke="rgba(42,31,26,.07)" stroke-width="2"/></pattern></defs>
+  <rect x="-14" y="-14" width="${W+28}" height="${W+28}" rx="14" fill="#F3E2B6"/>`;
+  for(let c=0;c<n*n;c++){const x=(c%n)*CELL,y=Math.floor(c/n)*CELL,k=P.room[c],kd=P.kind[k];
+    s+=`<rect x="${x}" y="${y}" width="${CELL+.5}" height="${CELL+.5}" fill="${roomTint(P,k)}"/>`;
+    s+=`<rect x="${x}" y="${y}" width="${CELL+.5}" height="${CELL+.5}" fill="url(#${kd==='out'?'grass':kd==='carpet'?'carpet':'boards'})"/>`;}
+  // helper: shade the free cells in rows and columns someone already stands in
+  if(o.helper!==false)for(let c=0;c<n*n;c++){if(occ.has(c))continue;if(rowsU.has(Math.floor(c/n))||colsU.has(c%n))s+=`<rect x="${(c%n)*CELL}" y="${Math.floor(c/n)*CELL}" width="${CELL}" height="${CELL}" fill="rgba(42,31,26,.16)"/>`;}
+  // thin cell lines
+  let g='';for(let i=1;i<n;i++){g+=`M${i*CELL} 0 V${W} M0 ${i*CELL} H${W} `;}
+  s+=`<path d="${g}" stroke="rgba(42,31,26,.18)" stroke-width="1.5" stroke-dasharray="4 6"/>`;
+  // walls, fences and hedges
+  let walls='',fence='',hedge='';
+  for(let c=0;c<n*n;c++){const r=Math.floor(c/n),k=c%n,x=k*CELL,y=r*CELL,me=P.room[c],out=P.kind[me]==='out';
+    const edge=(d,nbC,path)=>{if(nbC==null){if(out)hedge+=path;else walls+=path;return;}const o2=P.room[nbC];if(o2===me)return;const out2=P.kind[o2]==='out';if(out&&out2)fence+=path;else walls+=path;};
+    if(r===0)edge(0,null,`M${x} ${y} H${x+CELL} `);
+    if(k===0)edge(0,null,`M${x} ${y} V${y+CELL} `);
+    if(r===n-1)edge(0,null,`M${x} ${y+CELL} H${x+CELL} `);else if(P.room[c+n]!==me)edge(0,c+n,`M${x} ${y+CELL} H${x+CELL} `);
+    if(k===n-1)edge(0,null,`M${x+CELL} ${y} V${y+CELL} `);else if(P.room[c+1]!==me)edge(0,c+1,`M${x+CELL} ${y} V${y+CELL} `);
+  }
+  s+=`<g filter="url(#wob)"><path d="${hedge}" stroke="#4E9A44" stroke-width="12" stroke-linecap="round" fill="none"/><path d="${fence}" stroke="#9C6B3E" stroke-width="5" stroke-dasharray="10 7" fill="none"/><path d="${walls}" stroke="${INK}" stroke-width="7" stroke-linecap="round" fill="none"/></g>`;
+  // windows
+  let wn='';for(let c=0;c<n*n;c++){const w=P.win[c];if(!w)continue;const x=(c%n)*CELL,y=Math.floor(c/n)*CELL;
+    if(w&1)wn+=`<rect x="${x+22}" y="${y-5}" width="56" height="10" rx="2"/>`;if(w&4)wn+=`<rect x="${x+22}" y="${y+CELL-5}" width="56" height="10" rx="2"/>`;
+    if(w&8)wn+=`<rect x="${x-5}" y="${y+22}" width="10" height="56" rx="2"/>`;if(w&2)wn+=`<rect x="${x+CELL-5}" y="${y+22}" width="10" height="56" rx="2"/>`;}
+  s+=`<g fill="#9FD8F7" stroke="${INK}" stroke-width="3">${wn}</g>`;
+  // marks
+  if(S.marks)S.marks.forEach((m,c)=>{if(m&&!occ.has(c)&&!ENGINE.BLOCK.has(P.obj[c])){const x=(c%n)*CELL,y=Math.floor(c/n)*CELL;s+=`<path d="M${x+32} ${y+32} L${x+68} ${y+68} M${x+68} ${y+32} L${x+32} ${y+68}" stroke="#B0473F" stroke-width="7" stroke-linecap="round" opacity=".75"/>`;}});
+  // furniture
+  for(let c=0;c<n*n;c++){const ob=P.obj[c];if(!ob)continue;const x=(c%n)*CELL,y=Math.floor(c/n)*CELL;
+    if(occ.has(c))s+=`<g transform="translate(${x+54} ${y+56}) scale(.44)" opacity=".95"><g filter="url(#wob)">${objG(ob)}</g></g>`;
+    else s+=`<g transform="translate(${x+9} ${y+9}) scale(.82)"><g filter="url(#wob)">${objG(ob)}</g></g>`;}
+  // room numbers
+  roomOrder(P).forEach(k=>{const c=P.room.indexOf(k),x=(c%n)*CELL,y=Math.floor(c/n)*CELL;s+=`<g class="rno"><circle cx="${x+17}" cy="${y+17}" r="13" fill="#FFF8EA" stroke="${INK}" stroke-width="2.5"/><text x="${x+17}" y="${y+23}" text-anchor="middle" font-family="Bricolage Grotesque,system-ui,sans-serif" font-weight="800" font-size="17" fill="${INK}">${num[k]}</text></g>`;});
+  if(o.hl!=null){P.room.forEach((k,c)=>{if(k===o.hl)s+=`<rect class="room-hl" x="${(c%n)*CELL}" y="${Math.floor(c/n)*CELL}" width="${CELL}" height="${CELL}" fill="#FFD23F"/>`;});}
+  // people
+  const V=n-1;
+  pos.forEach((c,p)=>{if(c<0)return;const x=(c%n)*CELL+50,y=Math.floor(c/n)*CELL+52;
+    const cls=['tok',p===o.sel?'sel':'',p===o.fresh?'drop':'',clash.has(p)?'clash':'',o.killer===p?'sel':''].join(' ');
+    const lock=S.locked&&S.locked.includes(p);
+    s+=`<g transform="translate(${x} ${y}) scale(.74)"><g class="${cls}">${clash.has(p)?`<circle class="ring" r="50" fill="none" stroke="${INK}"/>`:''}${charG(P.people[p].ci,{chalk:p===V,mood:o.killer===p?'smug':o.solved&&p<V?'happy':undefined})}${lock?`<g transform="translate(30 32)"><circle r="12" fill="#FFD23F" stroke="${INK}" stroke-width="3"/><path d="M-4 -1 a4 4 0 1 1 6 3 l5 5" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/></g>`:''}</g></g>`;});
+  if(o.ripple!=null){const c=o.ripple;s+=`<circle class="ripple" cx="${(c%n)*CELL+50}" cy="${Math.floor(c/n)*CELL+50}" r="46" fill="none" stroke="#FFD23F" stroke-width="8"/>`;}
+  if(!o.static)for(let c=0;c<n*n;c++)s+=`<rect class="cell" data-c="${c}" x="${(c%n)*CELL}" y="${Math.floor(c/n)*CELL}" width="${CELL}" height="${CELL}" fill="transparent"/>`;
+  return s+'</svg>';
+}
+function legendHTML(P){const num={};roomOrder(P).forEach((k,i)=>num[k]=i+1);
+  return `<div class="legend">${roomOrder(P).map(k=>`<span data-k="${k}"><i style="background:${roomTint(P,k)}"></i>${num[k]} ${esc(P.roomNames[k])}${P.kind[k]==='carpet'?' <small>· carpet</small>':P.kind[k]==='out'?' <small>· outside</small>':''}</span>`).join('')}</div>`;}
+function storyHTML(P){const V=P.n-1,v=P.people[V];
+  return `<p>${esc(v.full)} was found ${esc(P.occasion)} at ${esc(P.house)}, next to ${esc(P.weapon)}. ${WORDS[P.n-1][0].toUpperCase()+WORDS[P.n-1].slice(1)} guests were about. Every person stood in a different row and a different column. Whoever was alone with ${esc(v.first)} did it.</p>`;}
+
+/* ---------- playing a case (solo and race share this) ---------- */
+function freshState(P){return {pos:new Array(P.n).fill(-1),marks:new Array(P.n*P.n).fill(0),struck:new Array(P.clues.length).fill(0),locked:[],ms:0,hints:0,wrong:0,done:false};}
+function brokenClues(P,pos){return P.clues.map((cl,i)=>ENGINE.truth(P,pos,cl)?-1:i).filter(i=>i>=0);}
+function samePos(a,b){return a.length===b.length&&a.every((c,i)=>c===b[i]);}
+/* o: {title, sub, race:true, clock:()=>ms, save:S=>{}, onSolve:(S)=>{}, onBack, lockUntil:()=>ms, onChange:S=>{}, oppHTML:()=>html, hints:true} */
+function playCase(P,S,o){
+  const n=P.n,V=n-1;let sel=-1,mode='place',undo=[],bad=[],fresh=-1,ripple=null,hl=null,lockTimer=null;
+  show(`<div class="casebar"><button class="btn ghost small" id="back">‹ ${o.race?'Room':'Cases'}</button><div class="t"><h3>${esc(o.title)}</h3><div class="sub">${esc(o.sub||'')}</div></div><span class="clock" id="clock">0:00</span></div>
+    ${o.race?'<div id="opp"></div>':''}
+    <details class="file story" ${S.storySeen?'':'open'}><summary class="type" style="cursor:pointer;font-size:14px;color:var(--ink-soft)">Case notes: ${esc(P.house)}</summary>${storyHTML(P)}</details>
+    <div class="boardwrap"><div id="bwrap"></div><div class="compass" aria-hidden="true"><svg viewBox="-20 -20 40 40"><path d="M0 -15 L5 0 L0 3 L-5 0Z" fill="#E0483F" stroke="${INK}" stroke-width="1.5"/><path d="M0 15 L5 0 L0 -3 L-5 0Z" fill="#fff" stroke="${INK}" stroke-width="1.5"/><text y="-9" x="9" font-size="9" font-weight="800" font-family="system-ui" fill="${INK}">N</text></svg></div></div>
+    ${legendHTML(P)}
+    <p class="status" id="status"></p>
+    <div class="tray" id="tray"></div>
+    <div class="tools"><button class="tool" id="mark" aria-pressed="false"><b>✕</b> Cross off</button><button class="tool" id="undo"><b>↶</b> Undo</button>${o.hints!==false?'<button class="tool" id="hint"><b>🔍</b> Hunch</button>':''}<button class="tool" id="clear">Clear</button></div>
+    <div class="accuse"><button class="btn red wide" id="accuse">Name the killer</button><p class="hint" id="ahint"></p></div>
+    <section class="file clues tab" data-tab="Witness statements"><span class="pin"></span><h3>Clues <small>tap one to tick it off</small></h3><div id="clues"></div></section>
+    <section class="file rules tab" data-tab="Rules" style="padding:16px"><ol style="margin-top:0">
+      <li>Every person, the victim too, stands in their own row and their own column.</li>
+      <li>Nobody can stand on a table, plant, bookcase, piano, clock, tree, pond or statue. Chairs, sofas, beds, rugs, benches and flower beds are fine.</li>
+      <li>"Next to" means the square beside them, not diagonal. North is up the map.</li>
+      <li>The killer is the one suspect alone in a room with the victim.</li></ol></section>`);
+  const bwrap=$('#bwrap'),status=$('#status');
+  on('#back','click',()=>{save();o.onBack();});
+  on('details.story','toggle',e=>{S.storySeen=!e.target.open;save();});
+  const save=()=>{if(!o.race&&!S.done)S.ms=o.clock();o.save&&o.save(S);};
+  const snap=()=>{undo.push(JSON.stringify({pos:S.pos,marks:S.marks}));if(undo.length>60)undo.shift();};
+  function setStatus(html){status.innerHTML=html;}
+  function cellInfo(c){const k=P.room[c],ob=P.obj[c],bits=[`<b>${esc(P.roomNames[k])}</b>${P.kind[k]==='carpet'?' (carpeted)':P.kind[k]==='out'?' (outside)':''}`];
+    if(ob)bits.push(OBJ_SHORT[ob]+(ENGINE.BLOCK.has(ob)?', nobody can stand here':''));if(P.win[c])bits.push('by a window');return bits.join(' · ');}
+  function draw(){
+    bwrap.innerHTML=boardSVG(P,S,{sel,fresh,ripple,hl});fresh=-1;ripple=null;hl=null;
+    $('#tray').innerHTML=P.people.map((pp,p)=>`<button class="chip${p===sel?' sel':''}${S.pos[p]>=0?' placed':''}${S.locked.includes(p)?' locked':''}" data-p="${p}" aria-pressed="${p===sel}">${charSVG(pp.ci,{chalk:p===V})}${esc(pp.first)}${p===V?' <small style="font-weight:500;opacity:.8">victim</small>':''}</button>`).join('');
+    $('#clues').innerHTML=P.clues.map((cl,i)=>`<button class="clue${S.struck[i]?' done':''}${bad.includes(i)?' bad':''}" data-i="${i}"><span class="no">${i+1}</span><span class="faces">${cluePeople(cl).map(p=>charSVG(P.people[p].ci,{chalk:p===V})).join('')}</span><span class="txt">${clueText(P,cl)}</span></button>`).join('')
+      +`<div class="clue rule"><span class="no">★</span><span class="txt">The killer was alone in a room with ${nm(P,V)}.</span></div>`;
+    const placed=S.pos.filter(c=>c>=0).length,lockLeft=o.lockUntil?o.lockUntil()-Date.now():0;
+    const acc=$('#accuse');acc.disabled=placed<n||S.done||lockLeft>0;
+    $('#ahint').textContent=lockLeft>0?`Wrong accusation. You can accuse again in ${Math.ceil(lockLeft/1000)}s.`:placed<n?`${placed} of ${n} placed. Place everyone, then accuse.`:'Everyone is placed. Who did it?';
+    $('#mark').classList.toggle('on',mode==='mark');$('#mark').setAttribute('aria-pressed',mode==='mark');
+    $('#undo').disabled=!undo.length;const h=$('#hint');if(h){h.disabled=S.hints>=3||S.done;h.innerHTML=`<b>🔍</b> Hunch (${3-S.hints})`;}
+    o.onChange&&o.onChange(S);
+  }
+  function place(p,c){
+    if(S.locked.includes(p))return;snap();
+    const other=S.pos.indexOf(c);
+    if(other>=0&&other!==p){if(S.locked.includes(other)){undo.pop();toast(`${P.people[other].first} is pinned there by a hunch.`);return;}S.pos[other]=S.pos[p];}
+    S.pos[p]=c;S.marks[c]=0;fresh=p;ripple=c;bad=[];buzz(12);
+  }
+  bwrap.addEventListener('click',e=>{
+    const t=e.target.closest('.cell');if(!t||S.done)return;const c=+t.dataset.c,occ=S.pos.indexOf(c),ob=P.obj[c];
+    if(mode==='mark'){if(occ<0&&!ENGINE.BLOCK.has(ob)){snap();S.marks[c]=S.marks[c]?0:1;buzz(6);}setStatus(cellInfo(c));draw();save();return;}
+    if(sel>=0){
+      if(occ===sel){snap();S.pos[sel]=-1;setStatus(`${esc(P.people[sel].first)} is back in the line-up.`);sel=-1;}
+      else if(ENGINE.BLOCK.has(ob)){setStatus(`Nobody can stand on the ${OBJ_NAMES[ob]}.`);hl=P.room[c];buzz([10,40,10]);}
+      else{place(sel,c);setStatus(`${esc(P.people[sel].first)} → ${cellInfo(c)}`);sel=-1;}
+    }else if(occ>=0){if(S.locked.includes(occ)){setStatus(`${esc(P.people[occ].first)} is pinned here by a hunch. ${cellInfo(c)}`);}else{sel=occ;setStatus(`Moving <b>${esc(P.people[occ].first)}</b>. Tap a square, or tap them again to take them off.`);}}
+    else{hl=P.room[c];setStatus(cellInfo(c)+'. Pick someone below to put here.');}
+    draw();save();
+  });
+  on('#tray','click',e=>{const b=e.target.closest('.chip');if(!b||S.done)return;const p=+b.dataset.p;if(S.locked.includes(p)){toast('That one is pinned by a hunch.');return;}
+    sel=sel===p?-1:p;mode='place';setStatus(sel>=0?`Where was <b>${esc(P.people[p].first)}</b>? Tap a square.`:'');draw();});
+  on('#clues','click',e=>{const b=e.target.closest('.clue[data-i]');if(!b)return;const i=+b.dataset.i;S.struck[i]=S.struck[i]?0:1;bad=bad.filter(x=>x!==i);draw();save();});
+  app.querySelector('.legend').addEventListener('click',e=>{const sp=e.target.closest('span[data-k]');if(!sp)return;hl=+sp.dataset.k;draw();});
+  on('#mark','click',()=>{mode=mode==='mark'?'place':'mark';sel=-1;setStatus(mode==='mark'?'Tap squares to cross them off. Tap again to undo a cross.':'');draw();});
+  on('#undo','click',()=>{const u=undo.pop();if(!u)return;const d=JSON.parse(u);S.pos=d.pos;S.marks=d.marks;bad=[];sel=-1;draw();save();});
+  on('#clear','click',()=>{if(!S.pos.some((c,p)=>c>=0&&!S.locked.includes(p))&&!S.marks.some(Boolean))return;snap();S.pos=S.pos.map((c,p)=>S.locked.includes(p)?c:-1);S.marks=S.marks.map(()=>0);bad=[];sel=-1;setStatus('Board cleared. Undo brings it back.');draw();save();});
+  on('#hint','click',()=>{
+    if(S.hints>=3)return;const cand=[...Array(n).keys()].filter(p=>S.pos[p]!==P.sol[p]);if(!cand.length)return;
+    const p=cand[Math.floor(Math.random()*cand.length)];snap();const c=P.sol[p],other=S.pos.indexOf(c);if(other>=0)S.pos[other]=-1;
+    S.pos[p]=c;S.locked.push(p);S.hints++;fresh=p;ripple=c;sel=-1;
+    setStatus(`🔍 Hunch: <b>${esc(P.people[p].first)}</b> was in the ${esc(P.roomNames[P.room[c]])}. Pinned in place.`);draw();save();});
+  on('#accuse','click',()=>{
+    const lb=document.createElement('div');lb.className='lb';
+    lb.innerHTML=`<div class="file" role="dialog" aria-label="Name the killer"><span class="pin"></span><h2 style="font-size:28px">Who did it?</h2><p class="type" style="font-size:14px;margin-top:4px">Tap the suspect who was alone with ${esc(P.people[V].first)}.</p>
+      <div class="lineup">${P.people.slice(0,V).map((pp,p)=>`<button data-p="${p}">${charSVG(pp.ci,{mood:'worried'})}${esc(pp.full)}</button>`).join('')}</div><button class="btn ghost small" id="lbx">Not yet</button></div>`;
+    document.body.appendChild(lb);
+    lb.addEventListener('click',e=>{if(e.target===lb||e.target.id==='lbx'){lb.remove();return;}const b=e.target.closest('button[data-p]');if(!b)return;lb.remove();accuse(+b.dataset.p);});
+  });
+  function accuse(pick){
+    const right=samePos(S.pos,P.sol)&&pick===P.murderer;
+    if(right){S.done=true;if(!o.race)S.ms=o.clock();sel=-1;save();buzz([30,60,30]);bigStamp('CASE<br>CLOSED');confetti();draw();later(()=>o.onSolve(S,pick),1500);return;}
+    S.wrong++;buzz([60,40,60]);
+    bad=brokenClues(P,S.pos);
+    const rowsBad=new Set(),dup=S.pos.some((c,p)=>S.pos.some((d,q)=>q!==p&&(Math.floor(c/n)===Math.floor(d/n)||c%n===d%n)));
+    const vr=P.room[S.pos[V]],with_=S.pos.slice(0,V).filter(c=>P.room[c]===vr).length;
+    let why;
+    if(dup)why='Two people share a row or column. Look for the red rings.';
+    else if(with_!==1)why=with_===0?`Nobody was in the room with ${P.people[V].first}, so this can't be how it happened.`:`${with_} suspects were in the room with ${P.people[V].first}. The killer was alone with them.`;
+    else if(bad.length)why=`${bad.length===1?'One clue doesn\'t':bad.length+' clues don\'t'} fit this board. They're marked in red.`;
+    else why=`The board fits, but ${P.people[pick].first} wasn't the one alone with ${P.people[V].first}.`;
+    bigStamp('NOT<br>PROVEN','no');setStatus(`<b>That doesn't add up.</b> ${esc(why)}`);
+    if(o.onWrong)o.onWrong(S);
+    draw();save();
+    if(bad.length&&!dup)later(()=>{const el=app.querySelector('.clue.bad');el&&el.scrollIntoView({behavior:RM?'auto':'smooth',block:'center'});},900);
+  }
+  // clock
+  const clockEl=$('#clock');const tick=()=>{if(!clockEl.isConnected){clearInterval(iv);return;}const lockLeft=o.lockUntil?o.lockUntil()-Date.now():0;
+    clockEl.textContent=lockLeft>0?'⛔ '+Math.ceil(lockLeft/1000)+'s':fmt(S.done?S.ms:o.clock());clockEl.classList.toggle('lock',lockLeft>0);
+    if(lockLeft>0||lockTimer){if(lockLeft<=0){lockTimer=null;draw();}else lockTimer=1;}};
+  const iv=setInterval(tick,250);cleanup.push(()=>clearInterval(iv));
+  const autosave=setInterval(save,5000);cleanup.push(()=>clearInterval(autosave));
+  const vis=()=>{if(document.visibilityState==='hidden')save();};document.addEventListener('visibilitychange',vis);cleanup.push(()=>document.removeEventListener('visibilitychange',vis));
+  setStatus(S.pos.some(c=>c>=0)?'Picking up where you left off.':'Pick someone below, then tap where they were.');
+  draw();tick();
+  return {redraw:draw,setStatus,opp:()=>{const el=$('#opp');if(el&&o.oppHTML)el.innerHTML=o.oppHTML();}};
+}
+/* ---------- home ---------- */
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+function miniGrid(diff){const cols={easy:['#F6D9C4','#D2E6D0','#B9DE9A'],medium:['#D6DEF4','#C96F6F','#F4E4A8'],hard:['#EAD3E8','#6F8FC9','#B9DE9A']}[diff]||['#F4E4A8','#D2E6D0','#C96F6F'];
+  return `<svg class="gridpic" viewBox="0 0 60 60" aria-hidden="true"><rect width="60" height="60" rx="6" fill="${cols[0]}"/><path d="M30 0 V34 H60 V60 H38 V34" fill="${cols[1]}"/><path d="M0 40 H22 V60 H0Z" fill="${cols[2]}"/><path d="M30 0 V34 H60 M38 34 V60 M0 40 H22 V60" fill="none" stroke="${INK}" stroke-width="3"/><rect x="1.5" y="1.5" width="57" height="57" rx="5" fill="none" stroke="${INK}" stroke-width="3"/>${diff==='daily'?`<circle cx="15" cy="17" r="8" fill="#E0483F" stroke="${INK}" stroke-width="2.5"/>`:''}</svg>`;}
+function heroSVG(){
+  const plan=`<rect x="0" y="0" width="240" height="240" rx="12" fill="#F3E2B6"/><rect x="10" y="10" width="110" height="130" fill="#F6D9C4"/><rect x="120" y="10" width="110" height="80" fill="#6F8FC9"/><rect x="120" y="10" width="110" height="80" fill="url(#carpetH)"/><rect x="120" y="90" width="110" height="140" fill="#D6DEF4"/><rect x="10" y="140" width="110" height="90" fill="#B9DE9A"/>
+   <path d="M10 10 H230 V230 H10Z M120 10 V230 M120 90 H230 M10 140 H120" fill="none" stroke="${INK}" stroke-width="6" stroke-linejoin="round"/><rect x="40" y="5" width="40" height="10" rx="2" fill="#9FD8F7" stroke="${INK}" stroke-width="2.5"/><rect x="225" y="130" width="10" height="40" rx="2" fill="#9FD8F7" stroke="${INK}" stroke-width="2.5"/>
+   <g transform="translate(130 150) scale(.5)">${objG('piano')}</g><g transform="translate(20 150) scale(.5)">${objG('tree')}</g><g transform="translate(66 20) scale(.45)">${objG('shelf')}</g>`;
+  return `<svg id="heroBoard" viewBox="-6 -24 252 270" aria-label="A little floor plan with suspects hopping about"><defs><pattern id="carpetH" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0 V12" stroke="rgba(255,255,255,.22)" stroke-width="4"/></pattern></defs><g filter="url(#wob)">${plan}</g>
+    <g class="chalkfig" transform="translate(178 192) scale(.42)">${charG(0,{chalk:true})}</g>
+    ${[0,1,2].map(i=>`<g class="tok" id="ht${i}"><g transform="scale(.42)">${charG(HERO_CAST[i])}</g></g>`).join('')}</svg>`;
+}
+const HERO_CAST=[4,22,30];
+const HERO_SPOTS=[[40,60],[90,110],[150,50],[200,60],[45,190],[90,180],[150,120],[205,110],[60,110],[175,40]];
+function heroLoop(){const svg=$('#heroBoard');if(!svg)return;let k=Math.floor(Math.random()*HERO_SPOTS.length);
+  const move=()=>{if(!svg.isConnected)return;const spots=ENGINE.shuffle(Math.random,HERO_SPOTS.slice());[0,1,2].forEach(i=>{const t=svg.querySelector('#ht'+i);if(t)t.setAttribute('transform',`translate(${spots[i][0]} ${spots[i][1]})`);});};
+  move();if(!RM){const iv=setInterval(()=>{if(!svg.isConnected){clearInterval(iv);return;}move();},1700);cleanup.push(()=>clearInterval(iv));}
+  svg.addEventListener('click',()=>{move();buzz(10);});}
+function stats(){return store.get('stats',{});}
+function home(){
+  const st=stats(),dk='daily-'+today(),dailyDone=(st.daily||[]).includes(today()),dailySaved=store.get('case:'+dk,null);
+  const tile=(d)=>{const s=st[d]||{},num=store.get('num:'+d,1),saved=store.get('case:'+d+'-'+num,null);
+    return `<button class="file tile" data-d="${d}">${miniGrid(d)}<div><h3>${DIFF_INFO[d].name}${saved&&!saved.S.done?'<span class="stamp">in progress</span>':''}</h3><p>${DIFF_INFO[d].sub}</p><div class="meta">Case ${String(num).padStart(3,'0')} · ${s.solved||0} solved${s.best?` · best ${fmt(s.best)}`:''}</div></div><span class="go">›</span></button>`;};
+  show(`<section class="hero">${heroSVG()}<h1 class="logo" aria-label="Murdoku">${[...'Murdo'].map((ch,i)=>`<span style="--i:${i}">${ch}</span>`).join('')}<span class="ku" style="--i:6">ku</span></h1>
+      <p class="tag">A whodunnit logic puzzle. Put every suspect on the map, <i>one per row and column</i>, and find who was alone with the victim.</p></section>
+    <div class="tiles">
+      <button class="file tile" data-d="daily">${miniGrid('daily')}<div><h3>Today's case${dailyDone?'<span class="stamp">closed</span>':dailySaved?'<span class="stamp">in progress</span>':''}</h3><p>A fresh Detective case every day. Same case for everyone.</p></div><span class="go">›</span></button>
+      ${['easy','medium','hard'].map(tile).join('')}
+    </div>
+    <section class="card online-box"><h3>Race on two phones</h3><p class="muted">You both get the same case. First to name the killer wins. A wrong accusation freezes you for 20 seconds.</p>
+      <div class="row"><button class="btn" id="host">Start a room</button><button class="btn ghost" id="join">Join a room</button></div></section>
+    <div class="row c"><button class="btn ghost small" id="how">How to play</button></div>`);
+  heroLoop();
+  app.querySelectorAll('.tile').forEach(t=>t.addEventListener('click',()=>openSolo(t.dataset.d)));
+  on('#host','click',()=>roomName(true));on('#join','click',()=>roomName(false));on('#how','click',rulesBox);
+}
+function rulesBox(){
+  const lb=document.createElement('div');lb.className='lb';
+  const ex=(o,t)=>`<div>${objSVG(o)}${OBJ_SHORT[o]}<small>${t}</small></div>`;
+  lb.innerHTML=`<div class="file rules" role="dialog" aria-label="How to play"><span class="pin"></span><h2 style="font-size:30px">How to play</h2>
+    <ol><li><b>Everyone gets their own row and column.</b> Nine people, nine rows, nine columns, just like sudoku. The victim counts too.</li>
+    <li><b>Read the witness statements.</b> They say where people were: in a room, on a sofa, by a window, north of someone else.</li>
+    <li><b>Tap a person, then tap a square.</b> Shaded squares are in a row or column that's already taken. Use Cross off to rule squares out.</li>
+    <li><b>Find the killer.</b> Exactly one suspect was alone in a room with the victim. When everyone is placed, tap Name the killer.</li></ol>
+    <p class="type" style="font-size:14px;margin:12px 0 4px">Things in the rooms</p>
+    <div class="objs">${ex('chair','stand on it')}${ex('sofa','stand on it')}${ex('bed','stand on it')}${ex('rug','stand on it')}${ex('bench','stand on it')}${ex('flowers','stand on it')}${ex('table','blocked')}${ex('plant','blocked')}${ex('shelf','blocked')}${ex('piano','blocked')}${ex('clock','blocked')}${ex('tree','blocked')}${ex('pond','blocked')}${ex('statue','blocked')}</div>
+    <p class="type" style="font-size:14px;margin-top:12px">Striped rooms are carpeted, grassy ones are outside, and the blue bars on walls are windows. "Next to" means a square that shares a side. North is up.</p>
+    <div class="row c" style="margin-top:14px"><button class="btn" id="lbok">Got it</button></div></div>`;
+  document.body.appendChild(lb);lb.addEventListener('click',e=>{if(e.target===lb||e.target.id==='lbok')lb.remove();});
+}
+function loading(text){
+  show(`<section class="file pop center" style="padding:30px 18px;display:flex;flex-direction:column;align-items:center;gap:12px"><span class="pin"></span>
+    <svg viewBox="-60 -60 120 120" style="width:120px" id="mag" aria-hidden="true"><g filter="url(#wob)"><circle cx="-8" cy="-8" r="34" fill="rgba(159,216,247,.45)" stroke="${INK}" stroke-width="8"/><path d="M18 18 L46 46" stroke="#9C6B3E" stroke-width="14" stroke-linecap="round"/><path d="M18 18 L46 46" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <g id="print" opacity=".7"><path d="M-20 -8 q12 -22 26 0 M-16 -2 q8 -16 18 0 M-12 4 q4 -10 10 0 M-24 -14 q16 -26 34 0" fill="none" stroke="#7A5CD6" stroke-width="2.6" stroke-linecap="round"/></g></g></svg>
+    <h2 style="font-size:28px">${text}</h2><p class="type" style="font-size:14px" id="lmsg">Measuring the rooms</p></section>`);
+  const msgs=['Measuring the rooms','Moving the furniture','Interviewing the guests','Dusting for fingerprints','Checking there is only one answer'];let i=0;
+  const iv=setInterval(()=>{const el=$('#lmsg');if(!el){clearInterval(iv);return;}el.textContent=msgs[++i%msgs.length];},700);cleanup.push(()=>clearInterval(iv));
+  if(!RM){const m=$('#mag');m.animate([{transform:'translate(-14px,0) rotate(-8deg)'},{transform:'translate(14px,-8px) rotate(8deg)'},{transform:'translate(-14px,0) rotate(-8deg)'}],{duration:1600,iterations:Infinity});}
+}
+async function openSolo(d){
+  const key=d==='daily'?'daily-'+today():d+'-'+store.get('num:'+d,1),diff=d==='daily'?'medium':d;
+  let saved=store.get('case:'+key,null);
+  if(!saved||!saved.P||!saved.P.people){loading(d==='daily'?"Opening today's case":`Opening case ${String(store.get('num:'+d,1)).padStart(3,'0')}`);
+    const t=Date.now(),P=await genCase(diff,hashSeed('mdk|'+key));await new Promise(r=>setTimeout(r,Math.max(0,900-(Date.now()-t))));
+    saved={P,S:freshState(P)};store.set('case:'+key,saved);}
+  if(saved.S.done)return soloDone(d,key,saved);
+  const {P,S}=saved;let start=Date.now()-S.ms;
+  playCase(P,S,{title:d==='daily'?"Today's case":`${DIFF_INFO[diff].name} · case ${String(store.get('num:'+d,1)).padStart(3,'0')}`,sub:P.house,
+    clock:()=>Date.now()-start,save:S2=>store.set('case:'+key,{P,S:S2}),onBack:home,
+    onSolve:S2=>{const st=stats();if(d==='daily'){st.daily=(st.daily||[]).concat(today()).slice(-60);}else{const s=st[d]||{solved:0};s.solved=(s.solved||0)+1;if(!s.best||S2.ms<s.best)s.best=S2.ms;st[d]=s;store.set('case:'+key,null);store.set('num:'+d,store.get('num:'+d,1)+1);}store.set('stats',st);soloDone(d,key,{P,S:S2});}});
+}
+function soloDone(d,key,{P,S}){
+  const V=P.n-1,k=P.murderer;
+  show(`<section class="file tab pop" data-tab="Case closed"><span class="pin"></span>
+    <div class="row" style="gap:14px;flex-wrap:nowrap">${charSVG(P.people[k].ci,{mood:'smug',cls:'killer'}).replace('<svg','<svg style="width:96px;flex:none"')}<div><h2 style="font-size:30px">${esc(P.people[k].full)} did it!</h2>
+    <p class="type" style="font-size:15px;margin-top:6px">Alone with ${esc(P.people[V].first)} in the ${esc(P.roomNames[P.room[P.sol[V]]])}, with ${esc(P.weapon)}.</p></div></div>
+    <div class="results" style="margin-top:14px"><div><b>${fmt(S.ms)}</b>time</div><div><b>${S.hints?S.hints+' 🔍':S.wrong?S.wrong+' ✗':'★'}</b>${S.hints?'hunches used':S.wrong?'wrong accusations':'clean solve'}</div></div></section>
+    <div class="boardwrap">${boardSVG(P,{pos:P.sol,marks:null,locked:[]},{static:true,helper:false,killer:k,solved:true})}</div>
+    <div class="row c">${d==='daily'?'':'<button class="btn" id="next">Next case</button>'}<button class="btn ghost" id="home">Home</button></div>`);
+  on('#home','click',home);
+  on('#next','click',()=>openSolo(d));
+}
+/* ---------- two phones: the same pairing the other Dapple games use ----------
+   Phones find each other through PeerJS's free public broker, using the room code as the host's address.
+   The room is one shared document that only the host's phone changes; each phone keeps a copy in local storage,
+   so a reload or a locked screen never loses the race. The whole case travels inside that document, so both
+   phones always solve exactly the same map. The guest's accusations are saved and sent again until the host has them. */
+const PEER_PREFIX='mdk-k7q2-';
+const LOCK_MS=20000;
+const peerOpts=()=>Object.assign({debug:0},window.MDK_PEER_SERVER||{});
+const DEVICE=(()=>{let d=store.get('device','');if(!d){d='d'+Math.random().toString(36).slice(2,12);store.set('device',d);}return d;})();
+const NET={peer:null,conn:null,host:false,code:null,active:false,rejoin:null,doc:null,intents:{},key:'',off:0,ctrl:null};
+const ME=()=>NET.host?0:1;
+const up=()=>!!(NET.conn&&NET.conn.open);
+const saveDoc=()=>store.set('doc:'+NET.code,NET.doc);
+const saveIntents=()=>store.set('intents:'+NET.code,NET.intents);
+const netEl=document.createElement('button');netEl.id='net';netEl.type='button';netEl.hidden=true;document.body.insertBefore(netEl,app);
+netEl.addEventListener('click',()=>{if(NET.active)home();});
+function reconnectNow(){if(NET.host)hostRoom();else{clearTimeout(NET.rejoin);NET.rejoin=null;scheduleRejoin(0);}}
+function netStatus(){
+  if(!NET.active){netEl.hidden=true;document.body.classList.remove('online');return;}
+  netEl.hidden=false;document.body.classList.add('online');netEl.classList.toggle('lost',!up());
+  const them=NET.doc&&NET.doc.names[1-ME()];
+  netEl.textContent=up()?`● Room ${NET.code} · with ${them||'partner'} · menu`:(NET.host&&!(NET.doc&&NET.doc.guest))?`● Room ${NET.code} · waiting for partner`:`● Room ${NET.code} · reconnecting… · menu`;
+}
+const libs={};
+function loadScript(src){if(!libs[src])libs[src]=new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>{delete libs[src];rej(new Error('load'));};document.head.appendChild(s);});return libs[src];}
+const LETTERS='ABCDEFGHJKMNPQRSTUVWXYZ';
+const newCode=()=>Array.from({length:4},()=>LETTERS[Math.floor(Math.random()*LETTERS.length)]).join('');
+function raw(m,c=NET.conn){if(c&&c.open){try{c.send(JSON.stringify(m));}catch(e){}}}
+function wireConn(conn){
+  conn.on('open',()=>{if(!NET.host){NET.conn=conn;raw({t:'hello',id:DEVICE,name:store.get('me','')});Object.values(NET.intents).forEach(it=>raw({t:'intent',it}));}keepAwake();netStatus();});
+  conn.on('data',d=>{let m;try{m=typeof d==='string'?JSON.parse(d):d;}catch(e){return;}if(m&&typeof m==='object')(NET.host?hostGot:guestGot)(conn,m);});
+  conn.on('close',()=>{if(NET.conn===conn){NET.conn=null;netStatus();renderOnline();scheduleRejoin();}});
+  conn.on('error',()=>{});
+}
+async function hostRoom(){
+  if(!NET.active||!NET.host)return;
+  try{await loadScript('vendor/peerjs.min.js');}catch(e){netEl.textContent='● Couldn\'t load the connection code. Tap to retry.';netEl.classList.add('lost');return;}
+  if(!NET.active||!NET.host)return;
+  if(NET.peer&&!NET.peer.destroyed&&NET.peer.open)return;
+  if(NET.peer){try{NET.peer.destroy();}catch(e){}}
+  const p=new Peer(PEER_PREFIX+NET.code,peerOpts());NET.peer=p;
+  p.on('open',()=>netStatus());
+  p.on('connection',conn=>wireConn(conn));
+  p.on('disconnected',()=>setTimeout(()=>{if(NET.peer===p&&!p.destroyed){try{p.reconnect();}catch(e){}}},3000));
+  p.on('error',e=>{if(NET.peer!==p||e.type==='peer-unavailable')return;setTimeout(()=>{if(NET.peer===p&&NET.active){try{p.destroy();}catch(x){}NET.peer=null;hostRoom();}},4000);});
+}
+function joinPeer(code){
+  return loadScript('vendor/peerjs.min.js').then(()=>new Promise(res=>{
+    if(NET.peer){try{NET.peer.destroy();}catch(e){}}
+    const p=new Peer(peerOpts());NET.peer=p;let done=false;
+    const fin=msg=>{if(done)return;done=true;clearTimeout(t);if(msg){try{p.destroy();}catch(e){}if(NET.peer===p)NET.peer=null;}res(msg||null);};
+    const t=setTimeout(()=>fin(`Couldn't reach room ${code}. Check the code, and ask your partner to keep Murdoku open on their screen.`),20000);
+    p.on('error',e=>fin(e.type==='peer-unavailable'?`Can't find room ${code}. Check the code, and ask your partner to keep Murdoku open on their screen.`:'Couldn\'t connect. Check your internet and try again.'));
+    p.on('open',()=>{const conn=p.connect(PEER_PREFIX+code,{serialization:'raw',reliable:true});wireConn(conn);conn.on('open',()=>fin(null));});
+  }),()=>'Couldn\'t load the connection code. Check your internet and try again.');
+}
+function scheduleRejoin(ms=2500){
+  if(NET.host||!NET.active||NET.rejoin||up())return;
+  NET.rejoin=setTimeout(async()=>{const err=await joinPeer(NET.code);NET.rejoin=null;NET.fails=err?(NET.fails||0)+1:0;netStatus();renderOnline();if(err&&NET.active&&!up())scheduleRejoin();},ms);
+}
+let wake=null;
+async function keepAwake(){try{if('wakeLock' in navigator&&!wake){wake=await navigator.wakeLock.request('screen');wake.addEventListener('release',()=>{wake=null;});}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible'||!NET.active)return;keepAwake();
+  if(NET.host){if(!NET.peer||NET.peer.destroyed)hostRoom();else if(NET.peer.disconnected){try{NET.peer.reconnect();}catch(e){}}}
+  else if(!up())scheduleRejoin(0);
+});
+setInterval(()=>{if(document.visibilityState!=='visible'||!NET.active)return;if(NET.host){if(!NET.peer||NET.peer.destroyed)hostRoom();}else if(!up())scheduleRejoin();},6000);
+function hostGot(conn,m){
+  const d=NET.doc;if(!d)return;
+  if(m.t==='hello'){
+    if(d.guest&&d.guest!==m.id){raw({t:'full'},conn);setTimeout(()=>{try{conn.close();}catch(e){}},300);return;}
+    if(NET.conn&&NET.conn!==conn){const old=NET.conn;NET.conn=null;try{old.close();}catch(e){}}
+    NET.conn=conn;conn.guestId=m.id;
+    if(!d.guest||d.names[1]!==String(m.name||'').slice(0,18)){d.guest=m.id;d.names[1]=String(m.name||'Partner').slice(0,18)||'Partner';commit();}
+    else raw({t:'doc',doc:d,now:Date.now()});
+    netStatus();return;
+  }
+  if(conn!==NET.conn||conn.guestId!==d.guest)return;
+  if(m.t==='intent'&&m.it)apply(1,m.it);
+}
+function commit(){NET.doc.v++;saveDoc();raw({t:'doc',doc:NET.doc,now:Date.now()});netStatus();renderOnline();}
+async function startRace(){
+  const d=NET.doc;if(!d.guest||NET.starting)return;NET.starting=true;NET.key='gen';loading('Writing up a new case');
+  const P=await genCase(d.diff||'medium',(Math.random()*4294967295)>>>0);NET.starting=false;
+  if(!NET.active||!NET.host)return;
+  d.game={gid:Math.random().toString(36).slice(2,9),P,t0:Date.now()+4500,ms:[null,null],wrong:[0,0],prog:[0,0],winner:-1};commit();
+}
+function apply(seat,it){
+  const d=NET.doc;if(!it||typeof it!=='object')return;const G=d.game;
+  if(it.k==='leave'&&seat===1){d.guest=null;d.names[1]='';d.game=null;return commit();}
+  if(it.k==='lobby'&&G&&(seat===0||G.winner>=0)){d.game=null;return commit();}
+  if(!G||it.gid!==G.gid)return;
+  if(it.k==='prog'&&typeof it.n==='number'&&G.prog[seat]!==it.n){G.prog[seat]=Math.max(0,Math.min(G.P.n,it.n|0));return commit();}
+  if(it.k==='wrong'&&typeof it.c==='number'&&it.c>G.wrong[seat]){G.wrong[seat]=it.c|0;return commit();}
+  if(it.k==='solve'&&G.winner<0&&Array.isArray(it.pos)&&samePos(it.pos,G.P.sol)&&it.pick===G.P.murderer){
+    G.winner=seat;G.ms[seat]=Math.max(0,+it.ms||0);d.wins[seat]=(d.wins[seat]||0)+1;return commit();}
+}
+function guestGot(conn,m){
+  if(m.t==='doc'&&m.doc&&Array.isArray(m.doc.names)){
+    if(typeof m.now==='number')NET.off=Date.now()-m.now;
+    if(!NET.doc||m.doc.v>=NET.doc.v||m.doc.code!==NET.doc.code){NET.doc=m.doc;saveDoc();pruneIntents();netStatus();renderOnline();}
+    if(NET.joinWait){const w=NET.joinWait;NET.joinWait=null;w();}
+  }
+  else if(m.t==='full'){if(NET.joinWait){const w=NET.joinWait;NET.joinWait=null;w('That room already has two players.');}}
+  else if(m.t==='closed'){const who=NET.doc&&NET.doc.names[0]||'Your partner';clearRoom();home();toast(`${who} closed the room.`);}
+}
+function stale(it,G){
+  if(it.k==='lobby')return !G||G.gid!==it.gid;
+  if(!G||it.gid!==G.gid)return true;
+  if(it.k==='solve')return G.winner>=0;
+  if(it.k==='wrong')return G.wrong[1]>=it.c;
+  return true;
+}
+function pruneIntents(){
+  const G=NET.doc.game;let ch=false;
+  for(const k of Object.keys(NET.intents)){if(k==='leave')continue;if(stale(NET.intents[k],G)){delete NET.intents[k];ch=true;}}
+  if(ch)saveIntents();
+}
+function act(it,keep=true){NET.away=false;if(NET.host){apply(0,it);return;}if(keep){NET.intents[it.k]=it;saveIntents();}raw({t:'intent',it});}
+function setRoom(code,host){NET.away=false;NET.code=code;NET.host=host;NET.active=true;NET.key='';NET.fails=0;NET.off=0;store.set('room',{code,host});NET.intents=store.get('intents:'+code,{});}
+function clearRoom(){
+  const c=NET.conn,p=NET.peer,code=NET.code;NET.conn=null;NET.peer=null;NET.active=false;clearTimeout(NET.rejoin);NET.rejoin=null;
+  NET.doc=null;NET.intents={};NET.key='';NET.ctrl=null;store.set('room',null);if(code){store.set('doc:'+code,null);store.set('intents:'+code,null);}
+  setTimeout(()=>{try{c&&c.close();}catch(e){}try{p&&p.destroy();}catch(e){}},300);netStatus();
+}
+function leaveRoom(){if(NET.host)raw({t:'closed'});else raw({t:'intent',it:{k:'leave'}});clearRoom();home();}
+function bootOnline(){
+  const r=store.get('room',null);if(!r||!r.code)return false;
+  setRoom(r.code,!!r.host);NET.doc=store.get('doc:'+r.code,null);
+  if(NET.host&&!NET.doc){clearRoom();return false;}
+  netStatus();
+  if(NET.doc&&NET.doc.game&&NET.doc.game.winner>=0){NET.away=true;home();}else renderOnline();
+  if(NET.host)hostRoom();else scheduleRejoin(0);
+  return true;
+}
+function roomName(host,err=''){
+  show(`<h2>${host?'Start a room':'Join a room'}</h2><section class="card stack" style="gap:14px">
+    <label class="f">Your name<input type="text" id="me" maxlength="18" placeholder="Your name" autocomplete="nickname" value="${esc(store.get('me',''))}"></label>
+    ${host?'<p class="hint">You get a four-letter code to give your partner.</p>':'<label class="f">Room code<input type="text" class="code" id="code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD"></label>'}
+    <p class="err" id="err">${err}</p>
+    <div class="row"><button class="btn" id="go">${host?'Open the room':'Join'}</button><button class="link" id="back">Back</button></div></section>`);
+  on('#back','click',home);
+  on('#go','click',async()=>{
+    const me=$('#me').value.trim(),e=$('#err');
+    if(!me){e.textContent='Add your name so your partner knows who they are racing.';return;}
+    store.set('me',me);
+    if(NET.active)leaveRoom();
+    if(host){const code=newCode();setRoom(code,true);NET.doc={v:1,code,names:[me,''],guest:null,game:null,wins:[0,0],diff:'medium'};saveDoc();netStatus();renderOnline();hostRoom();return;}
+    const code=$('#code').value.toUpperCase().replace(/[^A-Z]/g,'');
+    if(code.length!==4){e.textContent='Room codes are 4 letters.';return;}
+    const b=$('#go');b.disabled=true;b.textContent='Joining…';e.textContent='';
+    setRoom(code,false);NET.doc=null;
+    let msg=await joinPeer(code);
+    if(!msg)msg=await new Promise(res=>{NET.joinWait=res;setTimeout(()=>{if(NET.joinWait===res){NET.joinWait=null;res('The room didn\'t answer. Try again.');}},10000);});
+    if(msg){clearRoom();b.disabled=false;b.textContent='Join';e.textContent=msg;return;}
+    keepAwake();netStatus();renderOnline();
+  });
+}
+const t0Local=G=>G.t0+(NET.host?0:NET.off);
+function raceState(G){const k='race:'+G.gid;let S=store.get(k,null);if(!S){S=freshState(G.P);S.lockUntil=0;}return S;}
+function renderOnline(){
+  if(!NET.active)return;
+  const d=NET.doc,me=ME(),them=1-me;let key,draw;
+  if(NET.starting&&NET.key==='gen')return;
+  if(!NET.host&&!up()&&(NET.fails||0)>=2){const hn=esc(d&&d.names[0]||'your partner');key='gone';draw=()=>{show(`<section class="file pop center stack"><span class="pin"></span>${charSVG(9,{mood:'worried'}).replace('<svg','<svg style="width:90px;margin:0 auto"')}<h2>Can't reach ${hn}'s room</h2>
+      <p class="hint">${hn}'s phone may have closed the game. It keeps trying in the background.</p>
+      <div class="row c"><button class="btn" id="retry">Try again now</button><button class="btn ghost" id="leave">Leave the room</button></div><button class="link" id="home">Home</button></section>`);
+    on('#retry','click',reconnectNow);on('#leave','click',leaveRoom);on('#home','click',home);};}
+  else if(!d){key='connecting';draw=()=>waitScreen(`Joining room ${esc(NET.code)}…`);}
+  else if(!NET.host&&d.guest&&d.guest!==DEVICE){key='full';draw=()=>{show(`<section class="file stack center"><h2>That room is full</h2><p class="hint">Someone else is racing ${esc(d.names[0])} in room ${esc(NET.code)}.</p><button class="btn" id="leave">OK</button></section>`);on('#leave','click',leaveRoom);};}
+  else if(!d.game){key=`lobby|${d.names.join('|')}|${!!d.guest}|${up()}|${d.diff}|${d.wins.join()}`;draw=lobby;}
+  else{
+    const G=d.game;
+    if(G.winner>=0){key=`over|${G.gid}`;draw=()=>raceOver(G);}
+    else if(Date.now()<t0Local(G)){key=`cd|${G.gid}`;draw=()=>countdown(G);}
+    else if(raceState(G).done){key=`sent|${G.gid}`;draw=()=>waitScreen(up()||NET.host?'Case closed! Telling the room…':'Case closed! Waiting to reach the room…');}
+    else{key=`play|${G.gid}`;draw=()=>racePlay(G);}
+  }
+  if(NET.away)return;
+  if(key!==NET.key){NET.key=key;NET.ctrl=null;draw();}
+  else if(NET.ctrl)NET.ctrl.opp();
+}
+function oppHTML(G){const them=1-ME(),nmT=NET.doc.names[them]||'Partner',n=G.P.n,k=G.prog[them]||0;
+  return `<div class="opp">${charSVG(them?13:2)}<div style="flex:1;min-width:0"><div class="n">${esc(nmT)}${G.wrong[them]?` · ${G.wrong[them]} wrong`:''}</div><div class="bar"><i style="width:${k/n*100}%"></i></div></div><span class="n">${k}/${n}</span></div>`;}
+function countdown(G){
+  show(`<section class="file center pop stack" style="padding:26px 18px"><span class="pin"></span><p class="type">A new case at ${esc(G.P.house)}</p><div class="countdown" id="cd">3</div><p class="hint">Same map, same clues on both phones. First to name the killer wins.</p></section>`);
+  const tick=()=>{const left=t0Local(G)-Date.now(),el=$('#cd');if(!el)return;if(left<=0){NET.key='';renderOnline();return;}const s=Math.ceil(left/1000);if(el.textContent!==String(s)){el.textContent=s>3?'…':s;el.style.animation='none';void el.offsetWidth;el.style.animation='';buzz(10);}later(tick,100);};tick();
+}
+function racePlay(G){
+  const S=raceState(G),me=ME(),k='race:'+G.gid,base=t0Local(G);
+  let lastN=-1;
+  NET.ctrl=playCase(G.P,S,{race:true,hints:false,title:`Race · ${NET.doc.names[0]} v ${NET.doc.names[1]}`,sub:G.P.house,
+    clock:()=>Date.now()-base,lockUntil:()=>S.lockUntil||0,
+    save:S2=>store.set(k,S2),onBack:home,oppHTML:()=>oppHTML(NET.doc.game&&NET.doc.game.gid===G.gid?NET.doc.game:G),
+    onChange:S2=>{const n=S2.pos.filter(c=>c>=0).length;if(n!==lastN){lastN=n;act({k:'prog',gid:G.gid,n},false);}},
+    onWrong:S2=>{S2.lockUntil=Date.now()+LOCK_MS;store.set(k,S2);act({k:'wrong',gid:G.gid,c:S2.wrong});},
+    onSolve:(S2,pick)=>{S2.ms=Date.now()-base;store.set(k,S2);act({k:'solve',gid:G.gid,pos:S2.pos,pick,ms:S2.ms});
+      if(!NET.host){waitScreen(up()?'Case closed! Telling the room…':'Case closed! Waiting to reach the room…');NET.key='sent|'+G.gid;}}});
+  NET.ctrl.opp();
+}
+function raceOver(G){
+  const d=NET.doc,me=ME(),P=G.P,W=G.winner,V=P.n-1,k=P.murderer,mine=W===me;
+  show(`<section class="file tab pop" data-tab="${mine?'You win':'Case closed'}"><span class="pin"></span>
+    <h2 style="font-size:32px">${mine?'You cracked it first!':`${esc(d.names[W])} cracked it first`}</h2>
+    <div class="row" style="gap:12px;flex-wrap:nowrap;margin-top:10px">${charSVG(P.people[k].ci,{mood:'smug'}).replace('<svg','<svg style="width:80px;flex:none"')}<p class="type" style="font-size:15px">${esc(P.people[k].full)} was alone with ${esc(P.people[V].first)} in the ${esc(P.roomNames[P.room[P.sol[V]]])}, with ${esc(P.weapon)}.</p></div>
+    <div class="results" style="margin-top:12px"><div><b>${G.ms[W]!=null?fmt(G.ms[W]):'–'}</b>${esc(d.names[W])}'s time</div><div><b>${G.prog[1-W]||0}/${P.n}</b>${esc(d.names[1-W])} had placed</div></div>
+    <div class="tally" style="margin-top:12px"><div>${d.wins[0]||0}<small>${esc(d.names[0])}</small></div><div>–</div><div>${d.wins[1]||0}<small>${esc(d.names[1])}</small></div></div></section>
+    <div class="boardwrap">${boardSVG(P,{pos:P.sol,marks:null,locked:[]},{static:true,helper:false,killer:k,solved:true})}</div>
+    <div class="row c">${NET.host?'<button class="btn" id="again">Next case</button>':`<p class="hint">${esc(d.names[0])} starts the next case.</p>`}<button class="btn ghost" id="room">Back to the room</button></div>`);
+  if(mine){confetti();bigStamp('CASE<br>CLOSED');}
+  on('#again','click',startRace);on('#room','click',()=>act({k:'lobby',gid:G.gid}));
+}
+function lobby(){
+  const d=NET.doc,live=up();
+  const seg=`<div class="seg" id="seg">${['easy','medium','hard'].map(x=>`<button data-d="${x}" class="${d.diff===x?'on':''}" ${NET.host?'':'disabled'}>${DIFF_INFO[x].name}<small>${x==='easy'?'more clues':x==='medium'?'a good mix':'tricky'}</small></button>`).join('')}</div>`;
+  const score=(d.wins[0]||d.wins[1])?`<div class="tally"><div>${d.wins[0]}<small>${esc(d.names[0])}</small></div><div>–</div><div>${d.wins[1]}<small>${esc(d.names[1]||'?')}</small></div></div>`:'';
+  if(NET.host){
+    show(`<h2 class="center">Your room</h2><div class="roomcode" aria-label="Room code ${NET.code}">${[...NET.code].map(c=>`<span>${c}</span>`).join('')}</div>
+      <p class="center muted">Your partner opens Murdoku, taps <b>Join a room</b> and types this code.</p>
+      <div class="row c">${d.guest?`${charSVG(13,{mood:live?'happy':'worried'}).replace('<svg','<svg style="width:54px"')}<h3>${esc(d.names[1])} ${live?'is here!':'is reconnecting…'}</h3>`:`<h3 class="muted">Waiting for your partner…</h3>`}</div>
+      ${score}<section class="card stack" style="gap:12px"><span class="label">Difficulty</span>${seg}<button class="btn wide" id="start" ${d.guest?'':'disabled'}>Start the race</button></section>
+      <div class="row c"><button class="link" id="leave">Close the room</button><button class="link" id="home">Home</button></div>`);
+    on('#start','click',startRace);
+    on('#seg','click',e=>{const b=e.target.closest('button[data-d]');if(!b)return;d.diff=b.dataset.d;commit();});
+  }else{
+    show(`<section class="file pop center stack"><span class="pin"></span>${charSVG(13).replace('<svg','<svg style="width:80px;margin:0 auto"')}<h2>You're in room ${esc(NET.code)}</h2>
+      <p class="hint">The race starts on both phones when ${esc(d.names[0])} taps start.</p>${seg}${score}
+      <div class="row c"><button class="link" id="leave">Leave the room</button><button class="link" id="home">Home</button></div></section>`);
+  }
+  on('#leave','click',leaveRoom);on('#home','click',home);
+}
+function waitScreen(text){
+  show(`<section class="file pop center stack"><span class="pin"></span>${charSVG(ME()?13:2).replace('<svg','<svg style="width:80px;margin:0 auto"')}<h2>${text}</h2>
+    <p class="hint">Keep the game open. It moves on by itself.</p><button class="link" id="wmenu">Room menu</button></section>`);
+  on('#wmenu','click',home);
+}
+const homeBase=home;
+home=function(){homeBase();if(!NET.active)return;NET.away=true;NET.ctrl=null;const box=$('.online-box');
+  box.innerHTML=`<h3>You're in room ${esc(NET.code)}</h3>
+    ${up()?'':`<p class="muted">Not connected to ${esc(NET.doc&&NET.doc.names[1-ME()]||'your partner')} right now.</p>`}<div class="row"><button class="btn" id="toroom">Back to the race</button>${up()?'':'<button class="btn ghost" id="recon">Reconnect</button>'}<button class="btn ghost" id="leave">${NET.host?'Close the room':'Leave the room'}</button></div>`;
+  on('#recon','click',()=>{reconnectNow();toast('Reconnecting…');});
+  on('#toroom','click',()=>{NET.away=false;NET.key='';renderOnline();});on('#leave','click',leaveRoom);};
+
+window.__mdk={ENGINE,genCase,dress,NET,CHARS,freshState,samePos};
+if(!bootOnline())home();
+})();
+</script>
+</body>
+</html>
