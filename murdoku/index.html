@@ -445,7 +445,13 @@ function generate(seed,diff){
     for(const cl of pool){chosen.push(cl);if(chosen.length>=L.n&&(u=solve(L,chosen,2,null,BUD))===1)break;}
     if(u!==1)continue;
     // drop clues that aren't needed, last-chosen first is too predictable, so go in a random order
-    for(const cl of shuffle(r,chosen.slice())){const i=chosen.indexOf(cl);chosen.splice(i,1);if(solve(L,chosen,2,null,BUD)!==1)chosen.splice(i,0,cl);}
+    // every person, victim included, gets at least one clue: nobody is left to pure elimination
+    const mentions=list=>{const m=new Array(L.n).fill(0);for(const c of list){if(c.p!=null)m[c.p]++;if(c.q!=null)m[c.q]++;}return m;};
+    let men=mentions(chosen);
+    for(let p=0;p<L.n;p++){if(men[p])continue;const opts=pool.filter(c=>(c.p===p||c.q===p)&&!chosen.includes(c));
+      const soft=opts.filter(c=>!['in','on','corner'].includes(c.t));const pickc=(soft.length?soft:opts)[0];if(pickc){chosen.push(pickc);men=mentions(chosen);}}
+    for(const cl of shuffle(r,chosen.slice())){const i=chosen.indexOf(cl);chosen.splice(i,1);
+      const m=mentions(chosen);if([cl.p,cl.q].some(x=>x!=null&&!m[x])||solve(L,chosen,2,null,BUD)!==1)chosen.splice(i,0,cl);}
     return Object.assign(L,{diff,seed,sol,clues:JSON.parse(JSON.stringify(chosen)),murderer:murdererOf(L,sol)});
   }
   return null;
@@ -1153,7 +1159,7 @@ home=function(){homeBase();if(!NET.active)return;NET.away=true;NET.ctrl=null;con
    Phones can keep an old copy of the page for a while. On opening (and on coming back to the app) it fetches the page
    fresh and compares build stamps. Straight after opening it just reloads; later it offers a button, so nobody is
    pulled out of a case. Everything is saved, so a reload never loses progress. */
-const BUILD='2026-11-16c';
+const BUILD='2026-11-16d';
 let updShown=false;
 async function checkUpdate(boot){
   try{const r=await fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'});if(!r.ok)return;const t=await r.text();const m=t.match(/const BUILD='([^']+)'/);
