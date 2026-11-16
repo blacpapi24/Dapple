@@ -650,13 +650,15 @@ function boardSVG(P,S,o={}){
   let s=`<svg id="board" viewBox="-14 -14 ${W+28} ${W+28}" role="img" aria-label="Floor plan, ${n} by ${n}">
   <defs><pattern id="carpet" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="14" height="14" fill="none"/><path d="M0 0 V14" stroke="rgba(255,255,255,.22)" stroke-width="5"/></pattern>
   <pattern id="grass" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M10 20 l3 -8 l3 8 M33 42 l3 -8 l3 8 M38 12 l2 -6 l2 6" fill="none" stroke="#6FAE55" stroke-width="2.5" stroke-linecap="round"/></pattern>
+  <pattern id="blk" width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0 V18" stroke="rgba(21,32,42,.55)" stroke-width="6"/></pattern>
   <pattern id="boards" width="100" height="25" patternUnits="userSpaceOnUse"><path d="M0 24.5 H100 M40 0 V25" stroke="rgba(42,31,26,.07)" stroke-width="2"/></pattern></defs>
   <rect x="-14" y="-14" width="${W+28}" height="${W+28}" rx="14" fill="#F3E2B6"/>`;
   for(let c=0;c<n*n;c++){const x=(c%n)*CELL,y=Math.floor(c/n)*CELL,k=P.room[c],kd=P.kind[k];
     s+=`<rect x="${x}" y="${y}" width="${CELL+.5}" height="${CELL+.5}" fill="${roomTint(P,k)}"/>`;
     s+=`<rect x="${x}" y="${y}" width="${CELL+.5}" height="${CELL+.5}" fill="url(#${kd==='out'?'grass':kd==='carpet'?'carpet':'boards'})"/>`;}
   // helper: shade the free cells in rows and columns someone already stands in
-  if(o.helper!==false)for(let c=0;c<n*n;c++){if(occ.has(c))continue;if(rowsU.has(Math.floor(c/n))||colsU.has(c%n))s+=`<rect x="${(c%n)*CELL}" y="${Math.floor(c/n)*CELL}" width="${CELL}" height="${CELL}" fill="rgba(42,31,26,.16)"/>`;}
+  if(o.helper!==false){let sh='';for(let c=0;c<n*n;c++){if(occ.has(c))continue;if(rowsU.has(Math.floor(c/n))||colsU.has(c%n))sh+=`<rect x="${(c%n)*CELL}" y="${Math.floor(c/n)*CELL}" width="${CELL}" height="${CELL}"/>`;}
+    s+=`<g fill="rgba(21,32,42,.5)">${sh}</g><g fill="url(#blk)">${sh}</g>`;}
   // thin cell lines
   let g='';for(let i=1;i<n;i++){g+=`M${i*CELL} 0 V${W} M0 ${i*CELL} H${W} `;}
   s+=`<path d="${g}" stroke="rgba(42,31,26,.18)" stroke-width="1.5" stroke-dasharray="4 6"/>`;
@@ -681,6 +683,9 @@ function boardSVG(P,S,o={}){
   for(let c=0;c<n*n;c++){const ob=P.obj[c];if(!ob)continue;const x=(c%n)*CELL,y=Math.floor(c/n)*CELL;
     if(occ.has(c))s+=`<g transform="translate(${x+54} ${y+56}) scale(.44)" opacity=".95"><g filter="url(#wob)">${objG(ob)}</g></g>`;
     else s+=`<g transform="translate(${x+9} ${y+9}) scale(.82)"><g filter="url(#wob)">${objG(ob)}</g></g>`;}
+  // a line along each placed person's row and column, so it's clear nobody else fits there
+  if(o.helper!==false){let ln='';pos.forEach(c=>{if(c<0)return;const x=(c%n)*CELL+50,y=Math.floor(c/n)*CELL+50;ln+=`M0 ${y} H${W} M${x} 0 V${W} `;});
+    if(ln)s+=`<path d="${ln}" stroke="rgba(21,32,42,.45)" stroke-width="5" stroke-dasharray="2 10" stroke-linecap="round" fill="none"/>`;}
   // room numbers
   roomOrder(P).forEach(k=>{const c=P.room.indexOf(k),x=(c%n)*CELL,y=Math.floor(c/n)*CELL;s+=`<g class="rno"><circle cx="${x+17}" cy="${y+17}" r="13" fill="#FFF8EA" stroke="${INK}" stroke-width="2.5"/><text x="${x+17}" y="${y+23}" text-anchor="middle" font-family="Bricolage Grotesque,system-ui,sans-serif" font-weight="800" font-size="17" fill="${INK}">${num[k]}</text></g>`;});
   if(o.hl!=null){P.room.forEach((k,c)=>{if(k===o.hl)s+=`<rect class="room-hl" x="${(c%n)*CELL}" y="${Math.floor(c/n)*CELL}" width="${CELL}" height="${CELL}" fill="#FFD23F"/>`;});}
