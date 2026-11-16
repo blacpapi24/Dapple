@@ -499,7 +499,9 @@ function generate(seed,diff){
   for(let t=0;t<60;t++){
     const L=layout(r,diff);if(!L)continue;
     const sol=placeSolution(r,L);if(!sol)continue;
-    const pool=cluePool(L,sol).map(cl=>({cl,key:-Math.log(r()+1e-12)/(D.w[cl.t]||1)})).sort((a,b)=>a.key-b.key).map(x=>x.cl);
+    // nothing may hand over the answer: no "X was in the same room as the victim", and no clue naming the victim's room outright
+    const V=L.n-1,vRoom=L.room[sol[V]];
+    const pool=cluePool(L,sol).filter(cl=>!(cl.t==='same'&&(cl.p===V||cl.q===V))&&!(cl.t==='in'&&cl.room===vRoom)).map(cl=>({cl,key:-Math.log(r()+1e-12)/(D.w[cl.t]||1)})).sort((a,b)=>a.key-b.key).map(x=>x.cl);
     const chosen=[];let u=0;
     for(const cl of pool){chosen.push(cl);if(chosen.length>=L.n&&(u=solve(L,chosen,2,null,BUD))===1)break;}
     if(u!==1)continue;
@@ -908,7 +910,7 @@ function heroLoop(){const svg=$('#heroBoard');if(!svg)return;let k=Math.floor(Ma
   svg.addEventListener('click',()=>{move();buzz(10);});}
 function stats(){return store.get('stats',{});}
 function home(){
-  const st=stats(),dk='daily2-'+today(),dailyDone=(st.daily||[]).includes(today()),dailySaved=store.get('case:'+dk,null);
+  const st=stats(),dk='daily3-'+today(),dailyDone=(st.daily||[]).includes(today()),dailySaved=store.get('case:'+dk,null);
   const tile=(d)=>{const s=st[d]||{},num=store.get('num:'+d,1),saved=store.get('case:'+d+'-'+num,null);
     return `<button class="file tile" data-d="${d}">${miniGrid(d)}<div><h3>${DIFF_INFO[d].name}${saved&&!saved.S.done?'<span class="stamp">in progress</span>':''}</h3><p>${DIFF_INFO[d].sub}</p><div class="meta">Case ${String(num).padStart(3,'0')} · ${s.solved||0} solved${s.best?` · best ${fmt(s.best)}`:''}</div></div><span class="go">›</span></button>`;};
   show(`<section class="hero">${heroSVG()}<h1 class="logo" aria-label="Murdoku">${[...'Murdo'].map((ch,i)=>`<span style="--i:${i}">${ch}</span>`).join('')}<span class="ku" style="--i:6">ku</span></h1>
@@ -948,7 +950,7 @@ function loading(text){
   if(!RM){const m=$('#mag');m.animate([{transform:'translate(-14px,0) rotate(-8deg)'},{transform:'translate(14px,-8px) rotate(8deg)'},{transform:'translate(-14px,0) rotate(-8deg)'}],{duration:1600,iterations:Infinity});}
 }
 async function openSolo(d){
-  const key=d==='daily'?'daily2-'+today():d+'-'+store.get('num:'+d,1),diff=d==='daily'?'medium':d;
+  const key=d==='daily'?'daily3-'+today():d+'-'+store.get('num:'+d,1),diff=d==='daily'?'medium':d;
   let saved=store.get('case:'+key,null);
   if(!saved||!saved.P||!saved.P.people){loading(d==='daily'?"Opening today's case":`Opening case ${String(store.get('num:'+d,1)).padStart(3,'0')}`);
     const t=Date.now(),P=await genCase(diff,hashSeed('mdk|'+key));await new Promise(r=>setTimeout(r,Math.max(0,900-(Date.now()-t))));
@@ -1218,7 +1220,7 @@ home=function(){homeBase();if(!NET.active)return;NET.away=true;NET.ctrl=null;con
    Phones can keep an old copy of the page for a while. On opening (and on coming back to the app) it fetches the page
    fresh and compares build stamps. Straight after opening it just reloads; later it offers a button, so nobody is
    pulled out of a case. Everything is saved, so a reload never loses progress. */
-const BUILD='2026-11-16e';
+const BUILD='2026-11-16f';
 let updShown=false;
 async function checkUpdate(boot){
   try{const r=await fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'});if(!r.ok)return;const t=await r.text();const m=t.match(/const BUILD='([^']+)'/);
